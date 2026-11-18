@@ -9,8 +9,7 @@ control by its label), not *where* it was, so a repeat still works when the page
 longer matches, only that step goes back to your agent to fix, and the recipe comes back one revision on.
 
 > [!NOTE]
-> Version 0.1: the API and the recipe format can still change. Tested with fake drivers in CI; real runs against
-> agent-browser and Cua are being validated in [Openpals](https://github.com/borjasolerme/Openpals), its first user.
+> Version 0.1: the API and the recipe format can still change.
 
 ## Why
 
