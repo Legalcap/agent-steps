@@ -11,7 +11,7 @@ export {
   stepRefusal, stepWords, usedInputs, whyNotRecipe, type LearnInput,
 } from "./recipe.ts";
 export { createRecorder, recordedResult, type Recorder } from "./recorder.ts";
-export { POLL_MS, RETRY_MS, replay, resolveSoon, type RepairContext, type ReplayOptions, type ReplayOutcome, type StepEvent } from "./replay.ts";
+export { POLL_MS, RETRY_MS, replay, resolveSoon, seesSoon, type RepairContext, type ReplayOptions, type ReplayOutcome, type StepEvent } from "./replay.ts";
 export { FileStore, MAX_RECIPES, UNUSED_MS, type FileStoreOptions } from "./store.ts";
 export { cuaDriver } from "./cua/driver.ts";
 export { cuaOwns } from "./cua/rules.ts";

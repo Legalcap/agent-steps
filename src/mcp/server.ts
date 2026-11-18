@@ -2,10 +2,12 @@
 // and adds steps_start, steps_stop, steps_list, steps_run and steps_repair. While a recording is on, every passed-through
 // call is kept; steps_run repeats a recipe with no model in the loop. Tool calls are answered one at a time, in the order
 // they came, so a recording holds them in the order the agent made them; a cancelled request stops what it was doing.
+// A browser's answers are passed on as their text alone: agent-browser repeats each answer several times over in its
+// structured part, which makes a large page too long for the agent to read.
 import { requestKey } from "../key.ts";
 import { reviseRecipe, parseRecipe, stepLabel } from "../recipe.ts";
 import { createRecorder, recordedResult, type Recorder } from "../recorder.ts";
-import { replay } from "../replay.ts";
+import { replay, seesSoon } from "../replay.ts";
 import type { FileStore } from "../store.ts";
 import type { Driver, Patience, Recipe, Refusal } from "../types.ts";
 import { MCP_PROTOCOL, VERSION } from "../version.ts";
@@ -72,9 +74,16 @@ export const REFUSAL_HELP: Record<Refusal, string> = {
   "tool-error": "A call failed while recording.",
 };
 
+// Some clients show the agent only the structured part of an answer, so the words go there too.
 const say = (text: string, structured?: Record<string, unknown>, isError = false): ToolResult => ({
-  content: [{ type: "text", text }], ...(structured ? { structuredContent: structured } : {}), ...(isError ? { isError: true } : {}),
+  content: [{ type: "text", text }], structuredContent: { ...structured, message: text }, ...(isError ? { isError: true } : {}),
 });
+
+/** What to keep to while recording, said when a recording starts: each of these is a refusal at steps_stop otherwise. */
+const RULES: Record<Driver["kind"], string> = {
+  "agent-browser": "While recording: read a snapshot and act on the @refs it gives, not on CSS selectors; use fill (not type) and check or uncheck (not click) on boxes; do not run JavaScript, switch tabs, or press a final button (send, delete, pay, submit). Do those parts before steps_start or after steps_stop.",
+  cua: "While recording: read the window, then act on elements from that read, not on points of the screen; use set_value (not type_text); do not press a final button (send, delete, pay, submit).",
+};
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const stringMap = (value: unknown): Record<string, string> | undefined =>
   isRecord(value) && Object.values(value).every((item) => typeof item === "string") ? (value as Record<string, string>) : undefined;
@@ -83,9 +92,10 @@ const summary = (recipe: Recipe) => ({ name: recipe.name, id: recipe.id, revisio
 const stepList = (recipe: Recipe) => recipe.steps.map((step, index) => `${index + 1}. ${step.tool} ${stepLabel(step)}`).join("; ");
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-export function createStepsServer(deps: { driver: Driver; upstream: Upstream; store: FileStore; now?: () => number; id?: () => string; patience?: Patience; waitMs?: number }) {
+export function createStepsServer(deps: { driver: Driver; upstream: Upstream; store: FileStore; now?: () => number; id?: () => string; patience?: Patience; waitMs?: number; slim?: boolean }) {
   const now = deps.now ?? Date.now;
-  let recording: { recorder: Recorder; name: string; inputs?: Record<string, string>; repair?: { recipe: Recipe; at: number } } | null = null;
+  let recording: { recorder: Recorder; name: string; inputs?: Record<string, string>; repair?: { recipe: Recipe; at: number }; unsavable?: Refusal } | null = null;
+  const slim = deps.slim ?? deps.driver.kind === "agent-browser";
   const begin = (name: string, inputs?: Record<string, string>, repair?: { recipe: Recipe; at: number }) => {
     recording = { recorder: createRecorder({ driver: deps.driver, policy: "standard", now, ...(deps.id ? { id: deps.id } : {}) }), name, ...(inputs ? { inputs } : {}), ...(repair ? { repair } : {}) };
   };
@@ -99,7 +109,7 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
       if (typeof args.name !== "string" || !args.name.trim()) return say("Give the recipe a name.", undefined, true);
       if (recording) return say(`Already recording "${recording.name}". Call steps_stop first.`, undefined, true);
       begin(args.name.trim(), stringMap(args.inputs));
-      return say(`Recording "${args.name.trim()}". Do the task, then call steps_stop.`);
+      return say(`Recording "${args.name.trim()}". Do the task, then call steps_stop. ${RULES[deps.driver.kind]}`);
     }
     if (name === "steps_stop") {
       const current = recording;
@@ -110,6 +120,17 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
       const built = current.recorder.stop({ name: current.repair?.recipe.name ?? current.name, ...(current.inputs ? { inputs: current.inputs } : {}), checks });
       if (!built.ok) return say(`Not saved (${built.reason}). ${REFUSAL_HELP[built.reason]}`, { saved: false, reason: built.reason }, true);
       let recipe = built.recipe;
+      // A check is only worth keeping if it is true now, on the screen the recording ended on.
+      const unmet: string[] = [];
+      for (const check of recipe.checks) {
+        if (await seesSoon(deps.driver, check, signal ?? new AbortController().signal, deps.patience, deps.waitMs)) unmet.push(check.text);
+      }
+      if (unmet.length) recipe = { ...recipe, checks: recipe.checks.filter((check) => !unmet.includes(check.text)) };
+      const failedCalls = current.recorder.calls().filter((call) => call.result.isError).length;
+      const notes = [
+        ...(unmet.length ? [`Not kept as a check, because the page does not say it now: ${unmet.map((text) => `"${text}"`).join(", ")}.`] : []),
+        ...(failedCalls ? [`${failedCalls} call${failedCalls === 1 ? "" : "s"} that failed while recording ${failedCalls === 1 ? "was" : "were"} left out.`] : []),
+      ];
       if (current.repair) {
         const { recipe: old, at } = current.repair;
         const steps = [...old.steps.slice(0, at - 1), ...recipe.steps];
@@ -121,7 +142,7 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
       } catch (error) {
         return say(`Not saved: ${errorText(error)}.`, { saved: false }, true);
       }
-      return say(`Saved "${recipe.name}", revision ${recipe.revision}. steps_run repeats these steps without asking: ${stepList(recipe)}.`, { saved: true, recipe: summary(recipe) });
+      return say([`Saved "${recipe.name}", revision ${recipe.revision}. steps_run repeats these steps without asking: ${stepList(recipe)}.`, ...notes].join(" "), { saved: true, recipe: summary(recipe) });
     }
     const recipe = typeof args.name === "string" ? deps.store.find(requestKey(args.name)) : undefined;
     if (!recipe) return say(`No saved recipe named "${String(args.name ?? "")}". steps_list shows them.`, undefined, true);
@@ -130,7 +151,7 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
       if (at < 1 || at > recipe.steps.length + 1) return say(`at must be a step number from 1 to ${recipe.steps.length + 1}.`, undefined, true);
       if (recording) return say(`Already recording "${recording.name}". Call steps_stop first.`, undefined, true);
       begin(recipe.name, stringMap(args.inputs), { recipe, at });
-      return say(`Recording "${recipe.name}" again from step ${at}. Do the rest of the task, then call steps_stop.`);
+      return say(`Recording "${recipe.name}" again from step ${at}. Do the rest of the task, then call steps_stop. ${RULES[deps.driver.kind]}`);
     }
     const outcome = await replay(recipe, { driver: deps.driver, inputs: stringMap(args.inputs) ?? {}, policy: "standard", ...(signal ? { signal } : {}), ...(deps.patience ? { patience: deps.patience } : {}), ...(deps.waitMs !== undefined ? { waitMs: deps.waitMs } : {}), now });
     if (outcome.kind === "done") {
@@ -152,9 +173,22 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
   async function toolCall(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<unknown> {
     if (signal.aborted) throw new Error("stopped");
     if (STEPS_NAMES.has(name)) return stepsCall(name, args, signal);
-    const result = await deps.upstream.callRaw(name, args, signal);
-    recording?.recorder.record({ tool: name, arguments: args, result: recordedResult(callOutcome(result), deps.driver.kind) });
-    return result;
+    const raw = await deps.upstream.callRaw(name, args, signal);
+    const result = slim && isRecord(raw) && Array.isArray(raw.content) && raw.content.some((part) => isRecord(part) && part.type === "text")
+      ? Object.fromEntries(Object.entries(raw).filter(([key]) => key !== "structuredContent"))
+      : raw;
+    if (!recording) return result;
+    recording.recorder.record({ tool: name, arguments: args, result: recordedResult(callOutcome(raw), deps.driver.kind) });
+    if (recording.unsavable || !isRecord(result) || !Array.isArray(result.content)) return result;
+    // Say so at the call that makes the recording unsavable, not at steps_stop when the whole task has been done.
+    const learned = deps.driver.learn(recording.recorder.calls(), { request: recording.name, policy: "standard" });
+    if (learned.ok) return result;
+    recording.unsavable = learned.reason;
+    const warning = `agent-steps: after this call the recording cannot be saved (${learned.reason}). ${REFUSAL_HELP[learned.reason]} To record it, call steps_stop with discard, then steps_start, and do the task again without this.`;
+    return {
+      ...result, content: [...result.content, { type: "text", text: warning }],
+      ...(isRecord(result.structuredContent) ? { structuredContent: { ...result.structuredContent, agentSteps: warning } } : {}),
+    };
   }
 
   async function handle(frame: unknown): Promise<unknown> {

@@ -13,6 +13,8 @@ const textOf = (outcome: Extract<CallOutcome, { ok: true }>): string => outcome.
 /** agent-browser's refusal to act on an element another one covers at its click point. */
 const COVERED = /\bis covered by\b/iu;
 const UNCOVER_PX = 300;
+/** Keys with no element of their own go to whatever has focus, and a page that has just opened is not listening yet. */
+const KEY_SETTLE_MS = 300;
 
 export function agentBrowserDriver(caller?: Caller, options: AgentBrowserDriverOptions = {}): Driver<WebStep> {
   const prefix = options.prefix ?? WEB_PREFIX;
@@ -33,7 +35,10 @@ export function agentBrowserDriver(caller?: Caller, options: AgentBrowserDriverO
     async resolve(step, signal): Promise<Resolved> {
       const tool = `${prefix}${step.tool}`;
       const { target } = step;
-      if (!target) return { ok: true, tool, args: step.args };
+      if (!target) {
+        if (step.tool === "press") await live().call(`${prefix}wait_ms`, { ms: KEY_SETTLE_MS }, signal);
+        return { ok: true, tool, args: step.args };
+      }
       if (target.url) {
         // A step recorded on one page never runs on another, so a page that cannot be read stops it too.
         const where = await live().call(`${prefix}get_url`, {}, signal);

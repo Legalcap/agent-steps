@@ -72,11 +72,12 @@ describe("the steps MCP server", () => {
     const stopped = await call("steps_stop", { checks: ["Signed in"] });
     expect(stopped.content[0]!.text).toBe('Saved "Find {animal} billing", revision 1. steps_run repeats these steps without asking: 1. open https://example.com/; 2. fill "Search" searchbox; 3. click "Billing" link.');
     expect(store.list()).toHaveLength(1);
-    expect((await call("steps_list")).structuredContent).toEqual({ recipes: [{ name: "Find {animal} billing", id: "rec-1", revision: 1, steps: 3, inputs: ["animal"], checks: ["Signed in"] }] });
+    expect((await call("steps_list")).structuredContent).toMatchObject({ recipes: [{ name: "Find {animal} billing", id: "rec-1", revision: 1, steps: 3, inputs: ["animal"], checks: ["Signed in"] }] });
 
     const ran = await call("steps_run", { name: "find {animal} billing", inputs: { animal: "owls" } });
-    expect(ran.structuredContent).toEqual({ outcome: "done", steps: 3 });
-    expect(readFileSync(log, "utf8")).toContain('agent_browser_fill {"text":"owls","selector":"@e20"}');
+    expect(ran.structuredContent).toMatchObject({ outcome: "done", steps: 3 });
+    // Refs are renumbered at every snapshot; the repeat used the search box's ref of the moment.
+    expect(readFileSync(log, "utf8")).toMatch(/agent_browser_fill \{"text":"owls","selector":"@e\d0"\}/u);
   });
 
   it("says where a run failed, and repairs the recipe from that step as its next revision", async () => {
@@ -97,7 +98,7 @@ describe("the steps MCP server", () => {
     await call("agent_browser_click", { selector: `@${/link "Invoices" \[ref=(e\d+)\]/u.exec(page.content[0]!.text)![1]}` });
     expect((await call("steps_stop")).content[0]!.text).toBe('Saved "Open billing", revision 2. steps_run repeats these steps without asking: 1. click "Invoices" link.');
     expect(store.list()[0]).toMatchObject({ id: "rec-1", revision: 2, steps: [{ target: { role: "link", name: "Invoices" } }] });
-    expect((await call("steps_run", { name: "Open billing" })).structuredContent).toEqual({ outcome: "done", steps: 1 });
+    expect((await call("steps_run", { name: "Open billing" })).structuredContent).toMatchObject({ outcome: "done", steps: 1 });
   });
 
   it("refuses to save what it must not repeat, and says why", async () => {
@@ -138,6 +139,38 @@ describe("the steps MCP server", () => {
     expect(await dead.call("agent_browser_open", {}, new AbortController().signal)).toMatchObject({ ok: false, error: expect.stringContaining("exited") });
   });
 
+  it("says what to keep to when a recording starts, and warns at the call that makes it unsavable", async () => {
+    const { call } = await server();
+    const started = await call("steps_start", { name: "Count the links" });
+    expect(started.content[0]!.text).toContain("act on the @refs it gives");
+    expect(started.structuredContent).toMatchObject({ message: started.content[0]!.text });
+    expect((await call("agent_browser_snapshot")).content).toHaveLength(1);
+    const ran = await call("agent_browser_eval", { script: "document.links.length" });
+    expect(ran.content.at(-1)!.text).toMatch(/^agent-steps: after this call the recording cannot be saved \(unknown-tool\)\..*steps_stop with discard/u);
+    expect((await call("agent_browser_click", { selector: "@e11" })).content).toHaveLength(1);
+    expect(await call("steps_stop")).toMatchObject({ isError: true, structuredContent: { saved: false, reason: "unknown-tool" } });
+  });
+
+  it("keeps a check only when the page says it as the recording ends, and says what it left out", async () => {
+    const { call, store } = await server();
+    await call("steps_start", { name: "Open billing" });
+    await call("agent_browser_snapshot");
+    await call("agent_browser_click", { selector: "@e11" });
+    const stopped = await call("steps_stop", { checks: ["Signed in", "Payment received"] });
+    expect(stopped.content[0]!.text).toContain('Not kept as a check, because the page does not say it now: "Payment received".');
+    expect(store.list()[0]!.checks.map((check) => check.text)).toEqual(["Signed in"]);
+  });
+
+  it("passes a browser's answers on as their text, and whole when asked to", async () => {
+    const answer = { content: [{ type: "text", text: '- link "Billing" [ref=e1]' }], structuredContent: { stdout: "the same again, several times" } };
+    const upstream = { tools: async () => [], callRaw: async () => answer };
+    const store = new FileStore({ folder: join(dir, "recipes"), policy: "standard" });
+    const ask = async (slim?: boolean) => (await createStepsServer({ driver: agentBrowserDriver(), upstream, store, ...(slim === undefined ? {} : { slim }) })
+      .handle({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "agent_browser_snapshot", arguments: {} } }) as { result: unknown }).result;
+    expect(await ask()).toEqual({ content: answer.content });
+    expect(await ask(false)).toEqual(answer);
+  });
+
   it("answers one recording at a time", async () => {
     const { call } = await server();
     await call("steps_start", { name: "a" });
@@ -153,6 +186,7 @@ describe("agent-steps mcp", () => {
     expect(parseArgs(["mcp", "--", "agent-browser", "mcp"])).toMatchObject({ driver: "agent-browser", command: "agent-browser" });
     expect(parseArgs(["mcp", "--wait", "10", "--", "agent-browser", "mcp"])).toMatchObject({ waitMs: 10_000 });
     expect(parseArgs(["mcp", "--wait", "soon", "--", "agent-browser", "mcp"])).toMatch(/^usage/);
+    expect(parseArgs(["mcp", "--full-answers", "--", "agent-browser", "mcp"])).toMatchObject({ fullAnswers: true, command: "agent-browser" });
     expect(parseArgs(["mcp"])).toMatch(/^usage/);
     expect(parseArgs(["mcp", "--driver", "selenium", "--", "x"])).toMatch(/^usage/);
   });

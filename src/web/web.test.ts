@@ -188,6 +188,22 @@ describe("agentBrowserDriver", () => {
     expect(await sees("Changes saved")).toEqual({ ok: true, seen: true });
   });
 
+  it("takes what a field shows and the option that is chosen for something the page says", async () => {
+    const page = ['- combobox "LICENSE TYPE" [expanded=false, ref=e10]: Smog Check Technician', '  - option "Smog Check Technician" [selected, ref=e80]', '  - option "Brake Adjuster" [ref=e81]',
+      '- radio "Medium +$10.00" [checked, ref=e3]', '- radio "Large +$15.00" [ref=e4]'].join("\n");
+    const sees = (text: string) => agentBrowserDriver(caller(page, undefined, page)).sees({ kind: "text-visible", driver: "agent-browser", text }, signal);
+    expect(await sees("Smog Check Technician")).toEqual({ ok: true, seen: true });
+    expect(await sees("Medium +$10.00")).toEqual({ ok: true, seen: true });
+    expect(await sees("Brake Adjuster")).toEqual({ ok: true, seen: false });
+    expect(await sees("Large +$15.00")).toEqual({ ok: true, seen: false });
+  });
+
+  it("gives a page a moment before keys that go to whatever has focus", async () => {
+    const page = caller(PAGE);
+    expect(await agentBrowserDriver(page).resolve({ driver: "agent-browser", tool: "press", args: { key: "Tab" } }, signal)).toEqual({ ok: true, tool: "agent_browser_press", args: { key: "Tab" } });
+    expect(page.calls).toEqual(["agent_browser_wait_ms"]);
+  });
+
   it("reads a check from the page's snapshot, plain text included", async () => {
     const driver = agentBrowserDriver(caller(PAGE, undefined, '- paragraph: You and Tim Kilroy are now connected'));
     expect(await driver.sees({ kind: "text-visible", driver: "agent-browser", text: "Welcome back" }, signal)).toEqual({ ok: true, seen: true });

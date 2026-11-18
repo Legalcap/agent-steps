@@ -64,7 +64,8 @@ export async function resolveSoon(driver: Driver, step: Step, signal: AbortSigna
   }
 }
 
-async function seesSoon(driver: Driver, check: Check, signal: AbortSignal, patience: Patience, waitMs: number): Promise<Extract<CallOutcome, { ok: false }> | null> {
+/** Why a check is not met, after looking for a few seconds; null when its text is there. */
+export async function seesSoon(driver: Driver, check: Check, signal: AbortSignal, patience: Patience = REAL_TIME, waitMs = RETRY_MS): Promise<Extract<CallOutcome, { ok: false }> | null> {
   const deadline = patience.now() + waitMs;
   for (;;) {
     const read = await driver.sees(check, signal);

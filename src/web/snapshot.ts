@@ -46,14 +46,17 @@ export function readSnapshot(text: string): SnapshotNode[] {
 const CONTROL = /^(?:link|button|textbox|searchbox|combobox|listbox|option|checkbox|radio|switch|slider|spinbutton|menuitem\w*|tab|treeitem)$/iu;
 const TEXT_LINE = /^\s*- ([^\s"[\]:]+)(?: "((?:[^"\\]|\\.)*)")?[^:"]*(?:: ?(.*))?$/u;
 
-/** What a whole-page snapshot says, as one text: headings, paragraphs and status lines, without the labels of links,
- * buttons and fields. A check for "Saved" is not met by a "Saved items" link. */
+const CHOSEN = /\[(?:[^\]]*,\s*)?(?:checked|selected)(?:=true)?\s*[,\]]/u;
+
+/** What a whole-page snapshot says, as one text: headings, paragraphs and status lines, what each field shows, and the
+ * option or box that is chosen. Not the labels of links, buttons and unchosen options: a check for "Saved" is not met by
+ * a "Saved items" link. */
 export function saidText(text: string): string {
   const said: string[] = [];
   for (const line of text.split("\n")) {
     const item = TEXT_LINE.exec(line);
-    if (!item || CONTROL.test(item[1]!)) continue;
-    if (item[2]) said.push(unquote(item[2]));
+    if (!item) continue;
+    if (item[2] && (!CONTROL.test(item[1]!) || CHOSEN.test(line))) said.push(unquote(item[2]));
     if (item[3]) said.push(item[3].trim());
   }
   return said.join("\n");
