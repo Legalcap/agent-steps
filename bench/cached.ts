@@ -5,7 +5,7 @@
 // cache, so a fallback on one variant never helps the next.
 // Needs OPENROUTER_API_KEY (or OPENAI_API_KEY with OPENAI_BASE_URL) in bench/.env or the environment.
 // node bench/cached.ts [--n 5] [--tools stagehand,midscene] [--tasks ...] [--variants ...] [--model google/gemini-3-flash-preview] [--budget 9]
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -257,7 +257,8 @@ try {
 
 const version = async (name: string) => {
   try {
-    return (await import(`${name}/package.json`, { with: { type: "json" } })).default.version as string;
+    // Read from node_modules: a package whose exports leave out package.json (Midscene's) cannot be imported for it.
+    return (JSON.parse(readFileSync(join(import.meta.dirname, "node_modules", name, "package.json"), "utf8")) as { version: string }).version;
   } catch {
     return "unknown";
   }

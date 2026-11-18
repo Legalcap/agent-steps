@@ -199,7 +199,10 @@ try {
         continue;
       }
       const started = performance.now();
-      const outcome = await replay(recipe, { driver, policy: "standard" });
+      // A caller passes what it knows for each input the recipe names; an input it cannot answer stays empty, and
+      // replay stops safely before that step.
+      const inputs = Object.fromEntries(recipe.inputs.flatMap((name) => task.values?.[name] ? [[name, task.values[name]]] : []));
+      const outcome = await replay(recipe, { driver, policy: "standard", inputs });
       const ms = performance.now() - started;
       await new Promise((resolve) => setTimeout(resolve, 400));
       const verdict = judge(task, "base", fixture.events());

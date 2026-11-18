@@ -72,6 +72,8 @@ export interface Task {
   intents: Intent[];
   /** Text visible when the task is done (agent-steps keeps these as the recipe's checks). */
   checks: string[];
+  /** The values a caller knows for this request, by the short name a recipe may give its inputs ("name", "city"). */
+  values?: Record<string, string>;
   relabel: Record<string, string>;
   render(path: string, query: URLSearchParams, ctx: Ctx, state: RunState): Page | null;
   post?(path: string, form: URLSearchParams, ctx: Ctx, state: RunState): string;
@@ -355,6 +357,7 @@ const checkout: Task = {
     { do: "click", role: "button", name: "Continue to review" },
   ],
   checks: ["Review your order"],
+  values: ADDRESS,
   relabel: {
     "Continue to shipping": "Proceed to shipping", "Full name": "Name", "Street address": "Address line 1", "Postal code": "ZIP code",
     Continue: "Next", "Express (2 days)": "Express delivery (2 days)", "Continue to review": "Review order",
