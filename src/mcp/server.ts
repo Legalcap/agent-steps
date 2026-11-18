@@ -83,7 +83,7 @@ const summary = (recipe: Recipe) => ({ name: recipe.name, id: recipe.id, revisio
 const stepList = (recipe: Recipe) => recipe.steps.map((step, index) => `${index + 1}. ${step.tool} ${stepLabel(step)}`).join("; ");
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-export function createStepsServer(deps: { driver: Driver; upstream: Upstream; store: FileStore; now?: () => number; id?: () => string; patience?: Patience }) {
+export function createStepsServer(deps: { driver: Driver; upstream: Upstream; store: FileStore; now?: () => number; id?: () => string; patience?: Patience; waitMs?: number }) {
   const now = deps.now ?? Date.now;
   let recording: { recorder: Recorder; name: string; inputs?: Record<string, string>; repair?: { recipe: Recipe; at: number } } | null = null;
   const begin = (name: string, inputs?: Record<string, string>, repair?: { recipe: Recipe; at: number }) => {
@@ -132,7 +132,7 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
       begin(recipe.name, stringMap(args.inputs), { recipe, at });
       return say(`Recording "${recipe.name}" again from step ${at}. Do the rest of the task, then call steps_stop.`);
     }
-    const outcome = await replay(recipe, { driver: deps.driver, inputs: stringMap(args.inputs) ?? {}, policy: "standard", ...(signal ? { signal } : {}), ...(deps.patience ? { patience: deps.patience } : {}), now });
+    const outcome = await replay(recipe, { driver: deps.driver, inputs: stringMap(args.inputs) ?? {}, policy: "standard", ...(signal ? { signal } : {}), ...(deps.patience ? { patience: deps.patience } : {}), ...(deps.waitMs !== undefined ? { waitMs: deps.waitMs } : {}), now });
     if (outcome.kind === "done") {
       deps.store.touch(recipe.id);
       return say(`Done: ran ${recipe.steps.length} steps of "${recipe.name}".`, { outcome: "done", steps: recipe.steps.length });

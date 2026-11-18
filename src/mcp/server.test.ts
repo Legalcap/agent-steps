@@ -151,6 +151,8 @@ describe("agent-steps mcp", () => {
   it("parses its command line", () => {
     expect(parseArgs(["mcp", "--driver", "cua", "--store", "/tmp/r", "--", "cua-driver", "mcp"])).toEqual({ driver: "cua", store: "/tmp/r", command: "cua-driver", args: ["mcp"] });
     expect(parseArgs(["mcp", "--", "agent-browser", "mcp"])).toMatchObject({ driver: "agent-browser", command: "agent-browser" });
+    expect(parseArgs(["mcp", "--wait", "10", "--", "agent-browser", "mcp"])).toMatchObject({ waitMs: 10_000 });
+    expect(parseArgs(["mcp", "--wait", "soon", "--", "agent-browser", "mcp"])).toMatch(/^usage/);
     expect(parseArgs(["mcp"])).toMatch(/^usage/);
     expect(parseArgs(["mcp", "--driver", "selenium", "--", "x"])).toMatch(/^usage/);
   });
