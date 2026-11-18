@@ -5,7 +5,7 @@ export type {
 } from "./types.ts";
 export { RECIPE_VERSION } from "./types.ts";
 export { exactRequest, hasMomentWords, inRequest, requestKey } from "./key.ts";
-export { looksSecret, namesFinalAction, namesSearch, namesSecret } from "./words.ts";
+export { FINAL_ACTIONS, SEARCH_FIELDS, SECRET_FIELDS, looksSecret, namesFinalAction, namesSearch, namesSecret, type LanguageWords } from "./words.ts";
 export {
   MAX_STEPS, filledRefusal, fillInputs, holdsPersonWords, learnRecipe, parseRecipe, recipeFitsRequest, recipeRefusal, recipeSchema, reviseRecipe, stepLabel,
   stepRefusal, stepWords, usedInputs, whyNotRecipe, type LearnInput,
