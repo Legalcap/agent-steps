@@ -18,6 +18,8 @@ export function agentBrowserDriver(caller?: Caller, options: AgentBrowserDriverO
     return caller;
   };
   const snapshot = (signal: AbortSignal) => live().call(`${prefix}snapshot`, {}, signal);
+  // A check reads the whole page: the default snapshot holds only what can be acted on, not text such as "Saved".
+  const wholePage = (signal: AbortSignal) => live().call(`${prefix}snapshot`, { interactive: false }, signal);
   return {
     kind: "agent-browser",
     owns: prefix === WEB_PREFIX ? webOwns : (tool) => tool.startsWith(prefix),
@@ -44,7 +46,7 @@ export function agentBrowserDriver(caller?: Caller, options: AgentBrowserDriverO
     },
     perform: (tool, args, signal) => live().call(tool, args, signal),
     async sees(check, signal) {
-      const seen = await snapshot(signal);
+      const seen = await wholePage(signal);
       return seen.ok ? { ok: true, seen: textOf(seen).includes(check.text) } : seen;
     },
   };

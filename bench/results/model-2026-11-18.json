@@ -1,0 +1,1775 @@
+{
+ "suite": "model",
+ "meta": {
+  "date": "2026-11-18T16:57:06.353Z",
+  "node": "v22.22.2",
+  "agentStepsCommit": "7c17a70",
+  "machine": "Apple M2 Pro, 10 cores, 16 GB",
+  "os": "darwin 27.0.0 arm64",
+  "model": "anthropic/claude-sonnet-5.5",
+  "via": "openrouter",
+  "openRouterSpendUsd": 1.9044,
+  "claudeCli": "2.1.322 (Claude Code)",
+  "agentBrowser": "0.37.0",
+  "reps": 10,
+  "b2Reps": 2,
+  "claudeRuns": 39,
+  "prices": {
+   "input": 2,
+   "output": 10,
+   "cacheWrite": 2.5,
+   "cacheRead": 0.1
+  },
+  "aborted": null
+ },
+ "recordings": {
+  "invites": "2 steps, checks [\"You and Tim Kilroy are now connected\"]",
+  "checkout": "9 steps, checks [\"Review your order\"]",
+  "search": "4 steps, checks [\"Sony WH-1000XM5 Wireless Headphones\"]"
+ },
+ "records": [
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 5952,
+   "tokens": 90085,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 8621,
+    "cache_read_input_tokens": 81120,
+    "output_tokens": 338,
+    "output_tokens_details": {
+     "thinking_tokens": 36
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8621
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0330565,
+   "cliCostUsd": 0.033056499999999996,
+   "turns": 5,
+   "note": "DONE — I accepted Tim Kilroy's invitation (Head of Growth at Acme), and the page now says \"You and Tim Kilroy are now connected\". I didn't touch the other four invitations."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 5641,
+   "tokens": 89327,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 7902,
+    "cache_read_input_tokens": 81124,
+    "output_tokens": 295,
+    "output_tokens_details": {
+     "thinking_tokens": 28
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 7902
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0308294,
+   "cliCostUsd": 0.0308294,
+   "turns": 5,
+   "note": "DONE: I accepted Tim Kilroy's invitation, and his Accept and Ignore buttons are gone from the list. I didn't touch the other four invitations."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 2,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 6290,
+   "tokens": 89373,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 7909,
+    "cache_read_input_tokens": 81120,
+    "output_tokens": 338,
+    "output_tokens_details": {
+     "thinking_tokens": 37
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 7909
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0312765,
+   "cliCostUsd": 0.0312765,
+   "turns": 5,
+   "note": "DONE: I clicked Accept on Tim Kilroy's invitation, and his Accept and Ignore buttons are gone from the page. I didn't touch the other four invitations. The page still says \"Invitations (5)\", and the snapshot didn't show a confirmation message."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 3,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 5937,
+   "tokens": 87195,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 5800,
+    "cache_read_input_tokens": 81116,
+    "output_tokens": 273,
+    "output_tokens_details": {
+     "thinking_tokens": 27
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 5800
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.025353599999999997,
+   "cliCostUsd": 0.025353599999999997,
+   "turns": 4,
+   "note": "DONE — I clicked Accept on Tim Kilroy's invitation, the only one from him on the page, and left the other four alone. I didn't take a snapshot afterward, so I haven't confirmed the page updated."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 4,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 6247,
+   "tokens": 89363,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 7901,
+    "cache_read_input_tokens": 81120,
+    "output_tokens": 336,
+    "output_tokens_details": {
+     "thinking_tokens": 29
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 7901
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0312365,
+   "cliCostUsd": 0.0312365,
+   "turns": 5,
+   "note": "DONE: I clicked Accept on Tim Kilroy's invitation, and his Accept and Ignore buttons are no longer on the page. I didn't touch the other four invitations. The page never showed his title or company, so I matched on his name alone. He was the only Tim Kilroy listed."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 5,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 5518,
+   "tokens": 87211,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 5806,
+    "cache_read_input_tokens": 81120,
+    "output_tokens": 279,
+    "output_tokens_details": {
+     "thinking_tokens": 31
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 5806
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.025429,
+   "cliCostUsd": 0.025429,
+   "turns": 4,
+   "note": "DONE — I clicked Accept on Tim Kilroy's invitation (the only one from him) and left the other four alone. I didn't take a snapshot afterward, so I haven't confirmed the page shows it as accepted."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 6,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 11153,
+   "tokens": 117415,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 8543,
+    "cache_read_input_tokens": 108531,
+    "output_tokens": 333,
+    "output_tokens_details": {
+     "thinking_tokens": 28
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8543
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0355566,
+   "cliCostUsd": 0.0355566,
+   "turns": 5,
+   "note": "DONE: I accepted Tim Kilroy's invitation (Head of Growth at Acme), and the page now says \"You and Tim Kilroy are now connected\". I didn't touch the other four invitations."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 7,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 9977,
+   "tokens": 89368,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 7904,
+    "cache_read_input_tokens": 81120,
+    "output_tokens": 338,
+    "output_tokens_details": {
+     "thinking_tokens": 32
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 7904
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.031264,
+   "cliCostUsd": 0.031264,
+   "turns": 5,
+   "note": "DONE: I clicked Accept on Tim Kilroy's invitation, and his Accept/Ignore buttons are gone from the list. The page didn't show job titles, so I matched on the name alone, and it was the only Tim Kilroy listed. I didn't touch any other invitation."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 8,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 5916,
+   "tokens": 90065,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 8612,
+    "cache_read_input_tokens": 81116,
+    "output_tokens": 331,
+    "output_tokens_details": {
+     "thinking_tokens": 29
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8612
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.032963599999999996,
+   "cliCostUsd": 0.032963599999999996,
+   "turns": 5,
+   "note": "DONE: I accepted Tim Kilroy's invitation (Head of Growth at Acme). The page now says \"You and Tim Kilroy are now connected\", and I didn't touch the other four invitations."
+  },
+  {
+   "task": "invites",
+   "arm": "A",
+   "rep": 9,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 5766,
+   "tokens": 89358,
+   "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 7903,
+    "cache_read_input_tokens": 81120,
+    "output_tokens": 329,
+    "output_tokens_details": {
+     "thinking_tokens": 31
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 7903
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0311715,
+   "cliCostUsd": 0.031171499999999998,
+   "turns": 5,
+   "note": "DONE: I clicked Accept on Tim Kilroy's invitation, and his buttons disappeared from the list. The page didn't show job titles, so I matched on his name alone, and there was only one Tim Kilroy. I didn't touch the other four invitations."
+  },
+  {
+   "task": "invites",
+   "arm": "B-record",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 31495,
+   "tokens": 213925,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 8736,
+    "cache_read_input_tokens": 204670,
+    "output_tokens": 505,
+    "output_tokens_details": {
+     "thinking_tokens": 36
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8736
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.047385,
+   "cliCostUsd": 0.047385,
+   "turns": 7,
+   "note": "DONE: I accepted Tim Kilroy's invitation (Head of Growth at Acme). The page now says \"You and Tim Kilroy are now connected\", and I left the other four invitations alone. I saved the recipe \"Accept one invitation in a list\" with that text as its check."
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 499,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 2,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 480,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 3,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 471,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 4,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 463,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 5,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 473,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 6,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 470,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 7,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 460,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 8,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 429,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B-replay",
+   "rep": 9,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 452,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "invites",
+   "arm": "B2",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 9537,
+   "tokens": 114561,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 5456,
+    "cache_read_input_tokens": 108809,
+    "output_tokens": 288,
+    "output_tokens_details": {
+     "thinking_tokens": 44
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 5456
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0274169,
+   "cliCostUsd": 0.0274169,
+   "turns": 4,
+   "note": "DONE: I ran the saved recipe, and the page now shows \"You and Tim Kilroy are now connected\". The other four invitations (María López, Jon Park, Sara Cho, Li Wei) still show both Accept and Ignore buttons."
+  },
+  {
+   "task": "invites",
+   "arm": "B2",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 6879,
+   "tokens": 114577,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 5459,
+    "cache_read_input_tokens": 108808,
+    "output_tokens": 302,
+    "output_tokens_details": {
+     "thinking_tokens": 49
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 5459
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.027564300000000003,
+   "cliCostUsd": 0.0275643,
+   "turns": 4,
+   "note": "DONE: I ran the saved recipe, and the page now shows \"You and Tim Kilroy are now connected\". The other four invitations (María López, Jon Park, Sara Cho, Li Wei) still have their Accept and Ignore buttons, so I didn't touch them."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 10410,
+   "tokens": 155660,
+   "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 10995,
+    "cache_read_input_tokens": 143768,
+    "output_tokens": 887,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10995
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0507543,
+   "cliCostUsd": 0.050754299999999995,
+   "turns": 14,
+   "note": "DONE: I filled in the shipping address for Ana García (Calle Mayor 5, Madrid, 28013) and selected Express (2 days). I stopped at the \"Review your order\" page, and the page shows only its heading, so I couldn't check the entered details there."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 11404,
+   "tokens": 182937,
+   "usage": {
+    "input_tokens": 12,
+    "cache_creation_input_tokens": 10969,
+    "cache_read_input_tokens": 171063,
+    "output_tokens": 893,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10969
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.053482800000000004,
+   "cliCostUsd": 0.0534828,
+   "turns": 14,
+   "note": "DONE: I filled in the shipping address (Ana García, Calle Mayor 5, Madrid, 28013), selected Express (2 days) and stopped at the \"Review your order\" page. I didn't read the review page's contents, so I haven't confirmed the details shown there."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 2,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 10199,
+   "tokens": 155897,
+   "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 11241,
+    "cache_read_input_tokens": 143768,
+    "output_tokens": 878,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 11241
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0512793,
+   "cliCostUsd": 0.0512793,
+   "turns": 14,
+   "note": "DONE: I reached the review page, which shows Ana García, Calle Mayor 5, Madrid, 28013 and Delivery: express, and I stopped there."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 3,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 13582,
+   "tokens": 155663,
+   "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 10995,
+    "cache_read_input_tokens": 143768,
+    "output_tokens": 890,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10995
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.050784300000000004,
+   "cliCostUsd": 0.05078429999999999,
+   "turns": 14,
+   "note": "DONE — I filled in the shipping address (Ana García, Calle Mayor 5, Madrid, 28013), chose Express (2 days), and stopped on the \"Review your order\" page. The review page showed only its heading in the snapshot, so I didn't see the order details there."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 4,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 10785,
+   "tokens": 155671,
+   "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 10995,
+    "cache_read_input_tokens": 143768,
+    "output_tokens": 898,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10995
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0508643,
+   "cliCostUsd": 0.050864299999999994,
+   "turns": 14,
+   "note": "DONE: I filled in the shipping address for Ana García (Calle Mayor 5, Madrid, 28013) and selected Express (2 days). The browser is now on the \"Review your order\" page, where I stopped. I didn't read the page's contents, so I haven't confirmed that the details carried through."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 5,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 10283,
+   "tokens": 182965,
+   "usage": {
+    "input_tokens": 12,
+    "cache_creation_input_tokens": 10973,
+    "cache_read_input_tokens": 171073,
+    "output_tokens": 907,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10973
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0536338,
+   "cliCostUsd": 0.053633799999999995,
+   "turns": 14,
+   "note": "DONE: I filled in the shipping details for Ana García (Calle Mayor 5, Madrid, 28013), chose Express (2 days) and stopped on the review page. I didn't confirm that Express was selected before continuing, and the review page's snapshot showed only its heading, so I haven't checked the order details there."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 6,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 11322,
+   "tokens": 155661,
+   "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 10995,
+    "cache_read_input_tokens": 143768,
+    "output_tokens": 888,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10995
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.050764300000000005,
+   "cliCostUsd": 0.0507643,
+   "turns": 14,
+   "note": "DONE: I went through checkout with Ana García, Calle Mayor 5, Madrid, 28013 and Express (2 days) delivery, and stopped on the \"Review your order\" page. The review page showed only its heading, so I couldn't confirm the entered details there."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 7,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 17939,
+   "tokens": 155674,
+   "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 10995,
+    "cache_read_input_tokens": 143768,
+    "output_tokens": 901,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10995
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0508943,
+   "cliCostUsd": 0.050894299999999996,
+   "turns": 14,
+   "note": "DONE: I entered the shipping address (Ana García, Calle Mayor 5, Madrid, 28013) and chose Express (2 days) delivery. The browser is now on the review page (`/t/order/review`), where I stopped. The review page showed only its heading, so I couldn't check the entered details there."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 8,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 12781,
+   "tokens": 182934,
+   "usage": {
+    "input_tokens": 12,
+    "cache_creation_input_tokens": 10969,
+    "cache_read_input_tokens": 171063,
+    "output_tokens": 890,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 10969
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0534528,
+   "cliCostUsd": 0.053452799999999995,
+   "turns": 14,
+   "note": "DONE: I went through checkout with Ana García, Calle Mayor 5, Madrid 28013 and Express (2 days) delivery, and stopped on the review page. The review page's snapshot showed only its heading, so I couldn't read the entered details back from it."
+  },
+  {
+   "task": "checkout",
+   "arm": "A",
+   "rep": 9,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 10556,
+   "tokens": 155896,
+   "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 11243,
+    "cache_read_input_tokens": 143768,
+    "output_tokens": 875,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 11243
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0512543,
+   "cliCostUsd": 0.0512543,
+   "turns": 14,
+   "note": "DONE — I stopped at the review page, which shows \"Ana García, Calle Mayor 5, Madrid, 28013\" with \"Delivery: express\"."
+  },
+  {
+   "task": "checkout",
+   "arm": "B-record",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 13429,
+   "tokens": 225088,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 11475,
+    "cache_read_input_tokens": 212534,
+    "output_tokens": 1065,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 11475
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0606189,
+   "cliCostUsd": 0.0606189,
+   "turns": 16,
+   "note": "DONE: I filled in the checkout for Ana García (Calle Mayor 5, Madrid, 28013) with Express (2 days) delivery and stopped at the review page. The page shows those details and \"Delivery: express\". The recipe is saved with the check text \"Review your order\". It has no input placeholders, so the address values are fixed in the recipe."
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 970,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 2,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 963,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 3,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 944,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 4,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 989,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 5,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 973,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 6,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 947,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 7,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 982,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 8,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 958,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B-replay",
+   "rep": 9,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 922,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "checkout",
+   "arm": "B2",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 12469,
+   "tokens": 188726,
+   "usage": {
+    "input_tokens": 12,
+    "cache_creation_input_tokens": 11096,
+    "cache_read_input_tokens": 176569,
+    "output_tokens": 1049,
+    "output_tokens_details": {
+     "thinking_tokens": 93
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 11096
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0559109,
+   "cliCostUsd": 0.0559109,
+   "turns": 15,
+   "note": "DONE: I went through checkout by hand and stopped on the review page, which shows Ana García, Calle Mayor 5, Madrid, 28013 with delivery \"express\". I didn't run the saved order-form recipe, because it takes no inputs and I couldn't tell whether its stored address matched yours."
+  },
+  {
+   "task": "checkout",
+   "arm": "B2",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 7300,
+   "tokens": 112733,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 3399,
+    "cache_read_input_tokens": 109043,
+    "output_tokens": 283,
+    "output_tokens_details": {
+     "thinking_tokens": 60
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 3399
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0222478,
+   "cliCostUsd": 0.0222478,
+   "turns": 4,
+   "note": "DONE: I ran the saved order-form recipe, and the review page now shows Ana García, Calle Mayor 5, Madrid, 28013, with express delivery. I stopped there."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 8555,
+   "tokens": 211463,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 8691,
+    "cache_read_input_tokens": 202263,
+    "output_tokens": 495,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8691
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0469318,
+   "cliCostUsd": 0.046931799999999996,
+   "turns": 8,
+   "note": "DONE — I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page at http://127.0.0.1:4317/t/shop/p/sony-xm5. I checked the URL but didn't take a snapshot of the page itself."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 7053,
+   "tokens": 121821,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 8811,
+    "cache_read_input_tokens": 112538,
+    "output_tokens": 464,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8811
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0379373,
+   "cliCostUsd": 0.0379373,
+   "turns": 8,
+   "note": "DONE — I searched \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page, at http://127.0.0.1:4317/t/shop/p/sony-xm5."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 2,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 8278,
+   "tokens": 211454,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 8691,
+    "cache_read_input_tokens": 202263,
+    "output_tokens": 486,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8691
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0468418,
+   "cliCostUsd": 0.046841799999999996,
+   "turns": 8,
+   "note": "DONE — I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page at http://127.0.0.1:4317/t/shop/p/sony-xm5. I only checked the URL, not the page content."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 3,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 6561,
+   "tokens": 121867,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 8813,
+    "cache_read_input_tokens": 112544,
+    "output_tokens": 502,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8813
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0383229,
+   "cliCostUsd": 0.03832290000000001,
+   "turns": 8,
+   "note": "DONE: I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page. The browser's current URL is http://127.0.0.1:4317/t/shop/p/sony-xm5. I didn't take a snapshot of the product page itself, so I confirmed it from the URL only."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 4,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 9540,
+   "tokens": 211465,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 8691,
+    "cache_read_input_tokens": 202263,
+    "output_tokens": 497,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8691
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0469518,
+   "cliCostUsd": 0.046951799999999995,
+   "turns": 8,
+   "note": "DONE: I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page at http://127.0.0.1:4317/t/shop/p/sony-xm5. I confirmed the page by its URL and didn't take a snapshot of it."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 5,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 14883,
+   "tokens": 211802,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 9064,
+    "cache_read_input_tokens": 202263,
+    "output_tokens": 461,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 9064
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.047524300000000005,
+   "cliCostUsd": 0.0475243,
+   "turns": 8,
+   "note": "DONE — I searched \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page at /t/shop/p/sony-xm5."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 6,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 9401,
+   "tokens": 211409,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 8679,
+    "cache_read_input_tokens": 202263,
+    "output_tokens": 453,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8679
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.046481800000000004,
+   "cliCostUsd": 0.0464818,
+   "turns": 8,
+   "note": "DONE: I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page, and the page title matches."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 7,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 6537,
+   "tokens": 121806,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 8803,
+    "cache_read_input_tokens": 112550,
+    "output_tokens": 445,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 8803
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0377285,
+   "cliCostUsd": 0.0377285,
+   "turns": 8,
+   "note": "DONE — I searched \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page, and the page title confirms it."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 8,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 8268,
+   "tokens": 211803,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 9064,
+    "cache_read_input_tokens": 202263,
+    "output_tokens": 462,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 9064
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0475343,
+   "cliCostUsd": 0.0475343,
+   "turns": 8,
+   "note": "DONE — I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page at /t/shop/p/sony-xm5."
+  },
+  {
+   "task": "search",
+   "arm": "A",
+   "rep": 9,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 8565,
+   "tokens": 211815,
+   "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 9064,
+    "cache_read_input_tokens": 202263,
+    "output_tokens": 474,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 9064
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.047654300000000004,
+   "cliCostUsd": 0.0476543,
+   "turns": 8,
+   "note": "DONE: I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page at http://127.0.0.1:4317/t/shop/p/sony-xm5."
+  },
+  {
+   "task": "search",
+   "arm": "B-record",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 10583,
+   "tokens": 280393,
+   "usage": {
+    "input_tokens": 18,
+    "cache_creation_input_tokens": 9261,
+    "cache_read_input_tokens": 270478,
+    "output_tokens": 636,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 9261
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0565963,
+   "cliCostUsd": 0.0565963,
+   "turns": 10,
+   "note": "DONE: I searched for \"wireless headphones\" and opened the Sony WH-1000XM5 Wireless Headphones product page. I saved the recipe \"Search, open a result\" with 4 steps. Its check is the text \"Sony WH-1000XM5 Wireless Headphones\"."
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 718,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 2,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 682,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 3,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 642,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 4,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 655,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 5,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 686,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 6,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 657,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 7,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 721,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 8,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 649,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B-replay",
+   "rep": 9,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 699,
+   "tokens": 0,
+   "usage": null,
+   "estCostUsd": 0,
+   "cliCostUsd": 0,
+   "turns": 0,
+   "note": "agent-steps said: done"
+  },
+  {
+   "task": "search",
+   "arm": "B2",
+   "rep": 0,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 6250,
+   "tokens": 112587,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 3268,
+    "cache_read_input_tokens": 109103,
+    "output_tokens": 208,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 3268
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.021176300000000002,
+   "cliCostUsd": 0.021176300000000002,
+   "turns": 4,
+   "note": "DONE — I ran the saved \"Search, open a result\" recipe, and the browser is now on the Sony WH-1000XM5 product page (/t/shop/p/sony-xm5). I only checked the URL, not the page content."
+  },
+  {
+   "task": "search",
+   "arm": "B2",
+   "rep": 1,
+   "outcome": "success",
+   "reason": "all required actions happened",
+   "ms": 5978,
+   "tokens": 112608,
+   "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 3270,
+    "cache_read_input_tokens": 109109,
+    "output_tokens": 221,
+    "output_tokens_details": {
+     "thinking_tokens": 0
+    },
+    "server_tool_use": {
+     "web_search_requests": 0,
+     "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+     "ephemeral_1h_input_tokens": 0,
+     "ephemeral_5m_input_tokens": 3270
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard",
+    "fallback_credit": null
+   },
+   "estCostUsd": 0.0213119,
+   "cliCostUsd": 0.0213119,
+   "turns": 4,
+   "note": "DONE — I ran the saved \"Search, open a result\" recipe, and the browser is now on the Sony WH-1000XM5 product page (http://127.0.0.1:4317/t/shop/p/sony-xm5). I only checked the URL, not the page contents."
+  }
+ ]
+}

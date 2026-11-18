@@ -89,13 +89,14 @@ describe("learning browser steps", () => {
 });
 
 describe("agentBrowserDriver", () => {
-  const caller = (snapshot: string, url = "https://example.com/"): Caller & { calls: string[] } => {
+  // A snapshot leaves plain text out unless asked for it with `interactive: false`, as agent-browser's does.
+  const caller = (snapshot: string, url = "https://example.com/", text = ""): Caller & { calls: string[] } => {
     const calls: string[] = [];
     return {
       calls,
-      async call(tool): Promise<CallOutcome> {
+      async call(tool, args): Promise<CallOutcome> {
         calls.push(tool);
-        if (tool === "agent_browser_snapshot") return { ok: true, structured: {}, text: snapshot };
+        if (tool === "agent_browser_snapshot") return { ok: true, structured: {}, text: args.interactive === false ? `${snapshot}\n${text}` : snapshot };
         if (tool === "agent_browser_get_url") return { ok: true, structured: {}, text: url };
         return { ok: true, structured: {} };
       },
@@ -126,9 +127,10 @@ describe("agentBrowserDriver", () => {
     expect(await driver.resolve(step({ role: "button", name: "Pay", frame: true }), signal)).toMatchObject({ ok: true, args: { selector: "@e13" } });
   });
 
-  it("reads a check from the page's snapshot", async () => {
-    const driver = agentBrowserDriver(caller(PAGE));
+  it("reads a check from the page's snapshot, plain text included", async () => {
+    const driver = agentBrowserDriver(caller(PAGE, undefined, '- paragraph: You and Tim Kilroy are now connected'));
     expect(await driver.sees({ kind: "text-visible", driver: "agent-browser", text: "Welcome back" }, signal)).toEqual({ ok: true, seen: true });
+    expect(await driver.sees({ kind: "text-visible", driver: "agent-browser", text: "now connected" }, signal)).toEqual({ ok: true, seen: true });
     expect(await driver.sees({ kind: "text-visible", driver: "agent-browser", text: "Goodbye" }, signal)).toEqual({ ok: true, seen: false });
   });
 });
