@@ -280,7 +280,7 @@ All Playwright contenders and agent-steps wait at most 3 s for an element. Each 
 
 #### No model: replays on BASE and on perturbed pages
 
-Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-2026-11-18.json) · 2026-11-18T15:22:51.489Z · Node v24.19.0 · Playwright 1.64.1 (Chromium 156.0.8078.4) · agent-browser 0.37.0 · agent-steps 92f25de · Apple M2 Pro, 10 cores, 16 GB, darwin 27.0.0 arm64 · N = 5 per cell · action timeout 3000 ms.
+Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-2026-11-18.json) · 2026-11-18T17:04:26.956Z · Node v22.22.2 · Playwright 1.64.1 (Chromium 156.0.8078.4) · agent-browser 0.37.0 · agent-steps d7af9b0 · Apple M2 Pro, 10 cores, 16 GB, darwin 27.0.0 arm64 · N = 5 per cell · action timeout 3000 ms.
 
 ![Outcomes on the perturbed variants](bench/results/no-model.svg)
 
@@ -288,10 +288,10 @@ Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-
 
 | Contender | Success on BASE | Success on perturbed | Dangerous on perturbed | Safe stop on removed | Dangerous on removed | Median time on BASE |
 | --- | --- | --- | --- | --- | --- | --- |
-| agent-steps | 25/30 (83%) | 65/150 (43%) | 0/150 (0%) | 30/30 | 0/30 | 598 ms |
-| Coordinate macro | 30/30 (100%) | 85/150 (57%) | 10/150 (7%) | 15/30 | 15/30 | 955 ms |
-| CSS selectors (DevTools style) | 30/30 (100%) | 115/150 (77%) | 0/150 (0%) | 30/30 | 0/30 | 96 ms |
-| Playwright role locators | 30/30 (100%) | 85/150 (57%) | 0/150 (0%) | 30/30 | 0/30 | 102 ms |
+| agent-steps | 25/30 (83%) | 65/150 (43%) | 0/150 (0%) | 30/30 | 0/30 | 589 ms |
+| Coordinate macro | 30/30 (100%) | 85/150 (57%) | 10/150 (7%) | 15/30 | 15/30 | 957 ms |
+| CSS selectors (DevTools style) | 30/30 (100%) | 115/150 (77%) | 0/150 (0%) | 30/30 | 0/30 | 110 ms |
+| Playwright role locators | 30/30 (100%) | 85/150 (57%) | 0/150 (0%) | 30/30 | 0/30 | 110 ms |
 
 **By variant** (success / safe failure / dangerous, out of 30 runs: 6 tasks × 5):
 
@@ -335,36 +335,89 @@ Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-
 
 **Not recorded by agent-steps:** `login` (agent-steps refused to save the recipe: secret-field). Those rows count as safe failures for agent-steps on every variant, BASE included: it never acted.
 
-**agent-steps' own checks:** replaying each recipe once on BASE *with* its text check, agent-steps reported the right result for 1 of 5 tasks. For `search`, `invites`, `settings`, `projects` the task was done but it reported "stopped at step 5/4 (check "In stock"): "In stock" is not visible".
+**agent-steps' own checks:** replaying each recipe once on BASE *with* its text check, agent-steps reported the right result for 5 of 5 tasks.
 
 #### With a model: the agent every time vs. agent-steps
 
-**Not run yet.** `npm run bench:model` needs the `claude` CLI, signed in.
+Results file: [`bench/results/model-2026-11-18.json`](bench/results/model-2026-11-18.json) · 2026-11-18T16:57:06.353Z · model `anthropic/claude-sonnet-5.5` through Claude Code 2.1.322 (Claude Code) (`claude -p`, routed through OpenRouter) · agent-browser 0.37.0 · 39 Claude runs in total.
+
+Cost is estimated from the token counts Claude Code reports, at $2 / $10 per million input / output tokens, $2.5 per million cache-write and $0.1 per million cache-read tokens (API list prices for this model). "CLI cost" is Claude Code's own `total_cost_usd`. Billed by OpenRouter for the whole suite: $1.90.
+
+| Task | Approach | Runs | Success | Dangerous | Tokens (total) | Est. cost | CLI cost | Wall time (total) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| invites | A: agent every time | 10 | 10/10 | 0 | 918,760 | $0.31 | $0.31 | 68 s |
+| invites | B: agent once (recording) + replays | 10 | 10/10 | 0 | 213,925 | $0.05 | $0.05 | 36 s |
+| invites | B2: repeat asked of the agent (steps_run) | 2 | 2/2 | 0 | 229,138 | $0.05 | $0.05 | 16 s |
+| checkout | A: agent every time | 10 | 10/10 | 0 | 1,638,958 | $0.52 | $0.52 | 119 s |
+| checkout | B: agent once (recording) + replays | 10 | 10/10 | 0 | 225,088 | $0.06 | $0.06 | 22 s |
+| checkout | B2: repeat asked of the agent (steps_run) | 2 | 2/2 | 0 | 301,459 | $0.08 | $0.08 | 20 s |
+| search | A: agent every time | 10 | 10/10 | 0 | 1,846,705 | $0.44 | $0.44 | 88 s |
+| search | B: agent once (recording) + replays | 10 | 10/10 | 0 | 280,393 | $0.06 | $0.06 | 17 s |
+| search | B2: repeat asked of the agent (steps_run) | 2 | 2/2 | 0 | 225,195 | $0.04 | $0.04 | 12 s |
+
+Recordings made by the agent in B: `invites`: 2 steps, checks ["You and Tim Kilroy are now connected"]; `checkout`: 9 steps, checks ["Review your order"]; `search`: 4 steps, checks ["Sony WH-1000XM5 Wireless Headphones"].
 
 #### Other "cache, then replay" tools: Stagehand and Midscene.js
 
-**Not run yet.** The adapters and the runner are in `bench/cached.ts`; they need a funded `OPENROUTER_API_KEY` (or `OPENAI_API_KEY` + `OPENAI_BASE_URL`) in `bench/.env`. When this was written the key was present but the OpenRouter account had no balance (the runner checks the balance with a free call first and stops), so there are no numbers for Stagehand or Midscene here.
+Results file: [`bench/results/cached-2026-11-18.json`](bench/results/cached-2026-11-18.json) · model `google/gemini-3-flash-preview` via https://openrouter.ai/api/v1 · Stagehand 3.7.3 · Midscene 1.17.5 · spend $0.5311.
+
+Side by side, all six tasks, N = 5 (success / safe failure / dangerous):
+
+| Tool | How it replays | 5 changed variants | Target removed (stopping is right) | Replays that called a model |
+| --- | --- | --- | --- | --- |
+| agent-steps | saved steps, no model | 65 / 85 / 0 | 0 / 30 / 0 | 0 |
+| stagehand | cache, model when the cache misses | 105 / 10 / 35 | 0 / 5 / 25 | 80/210 |
+| midscene | cache, model when the cache misses | 101 / 14 / 35 | 0 / 20 / 10 | 125/210 |
+
+Every run, by variant:
+
+| Tool | Variant | Success / safe / dangerous | Runs with a model call | Model cost |
+| --- | --- | --- | --- | --- |
+| stagehand | first-run | 6 / 0 / 0 | 6/6 | $0.018 |
+| stagehand | base | 30 / 0 / 0 | 0/30 | $0.000 |
+| stagehand | moved | 15 / 0 / 15 | 20/30 | $0.046 |
+| stagehand | renamed | 30 / 0 / 0 | 30/30 | $0.088 |
+| stagehand | relabeled | 30 / 0 / 0 | 0/30 | $0.000 |
+| stagehand | overlay | 25 / 5 / 0 | 5/30 | $0.004 |
+| stagehand | duplicate | 5 / 5 / 20 | 20/30 | $0.020 |
+| stagehand | removed | 0 / 5 / 25 | 5/30 | $0.003 |
+| midscene | first-run | 6 / 0 / 0 | 6/6 | $0.046 |
+| midscene | base | 30 / 0 / 0 | 0/30 | $0.000 |
+| midscene | moved | 20 / 0 / 10 | 20/30 | $0.069 |
+| midscene | renamed | 30 / 0 / 0 | 30/30 | $0.117 |
+| midscene | relabeled | 26 / 4 / 0 | 30/30 | $0.044 |
+| midscene | overlay | 25 / 5 / 0 | 5/30 | $0.005 |
+| midscene | duplicate | 0 / 5 / 25 | 20/30 | $0.032 |
+| midscene | removed | 0 / 20 / 10 | 20/30 | $0.038 |
+
 <!-- bench:end -->
 
-**What the run above says**, in plain words:
+**What the runs above say**, in plain words:
 
-- **agent-steps never acted on the wrong thing**: 0 dangerous runs out of 210. Neither did the CSS selectors or the
-  role locators. The coordinate macro did 25 times: it accepted another person's invitation, archived another project
-  and opened another product when the list shifted or the target was gone.
+- **agent-steps never acted on the wrong thing.** 0 dangerous runs out of 210 without a model, against 25 for the
+  coordinate macro, 60 for Stagehand's cache and 45 for Midscene's cache on the same tasks. When the list shifted or the
+  target was gone, the coordinate macro and both caches accepted another person's invitation, archived another project
+  or opened another product. agent-steps stopped instead, every time. So did the CSS selectors and role locators.
+- **With a model, a saved recipe does the same job for a fraction of the tokens.** Claude Sonnet 5.5 did each of the
+  three tasks 10 out of 10 times on its own (about 0.9 to 1.8 million tokens per 10 runs); recording once and replaying
+  9 times with no model did the same 10 out of 10 with about 0.2 to 0.3 million tokens, all spent on the recording, and
+  each replay took under a second instead of 6 to 20 seconds. Asked to repeat the task, Claude found the recipe with
+  `steps_list` and ran it with `steps_run` in 5 of 6 runs (once it chose to do the checkout by hand), at about 115
+  thousand tokens a run against 90 to 340 thousand doing it itself.
 - **It is not the most robust replay here.** On the five perturbed variants it finished 65 of 150 runs (65 of 125
-  without the login task, which it refuses to record), against 85 for role locators and 115 for DevTools-style CSS
-  selectors. It matches role locators on moved, renamed, relabeled and duplicate pages, and loses to them on the
-  overlay (agent-browser won't click a covered element; Playwright scrolls it free).
+  without the login task, which it refuses to record), against 85 for role locators, 115 for DevTools-style CSS
+  selectors and about 100 for Stagehand and Midscene, which call a model when the cache misses. It matches role locators
+  on moved, renamed, relabeled and duplicate pages, and loses to them on the overlay (agent-browser won't click a covered
+  element; Playwright scrolls it free).
+- **The caches buy their extra successes with wrong actions.** Stagehand and Midscene finished renamed and relabeled
+  pages by asking the model again, but on duplicate and removed targets the cache or the model picked a look-alike: 45
+  and 35 dangerous runs on those two variants. agent-steps has no model in the replay, so it stops and hands the step
+  back to the agent (`steps_repair`) instead of guessing.
 - **CSS selectors did best because the fixture gives elements stable ids** (`#inv-tim-acme`, `#email`): they survive
   layout changes, new labels and look-alikes, and break on every renamed id. Sites without stable ids would look
   different.
-- **On duplicates agent-steps and role locators both stop** (two "Tim Kilroy" cards, two "Language" dropdowns): safe,
-  but not done. Which one was meant needs either a stable id or a model.
 - **It is slower per run** than Playwright (a median 0.6 s against 0.1 s on BASE) because every step reads a fresh
   snapshot over MCP before acting.
-- The trade agent-steps makes is in the parts this suite cannot show: the recipe comes from what the agent already did
-  (no selectors to write), it refuses passwords and final actions, and a failed step goes back to the agent to repair
-  instead of to a person. The model suite is meant to measure that part and has not run yet (see the notes).
 
 ### Reproduce
 
@@ -374,6 +427,7 @@ npm run bench:install                 # bench/ dependencies (pinned) and Playwri
 npm run bench                         # no-model suite, N=5 (about an hour), then renders this section
 node bench/run.ts --n 1 --tasks invites --variants base,duplicate   # a quick subset
 npm run bench:model                   # needs the `claude` CLI, signed in; at most 40 Claude runs
+node bench/model.ts --via openrouter  # the same through OpenRouter (OPENROUTER_API_KEY in bench/.env), spend cap --budget 6
 npm run bench:cached                  # Stagehand and Midscene; needs OPENROUTER_API_KEY in bench/.env
 ```
 
@@ -412,16 +466,19 @@ run it: install cua-driver, give your terminal Accessibility permission, close T
   from that step.
 - **Overlays.** agent-browser refuses to click an element covered by another one, so agent-steps stops; Playwright
   scrolls the element out from under a fixed banner and clicks it.
-- **agent-steps' own checks report false failures with agent-browser 0.37.** Its `text-visible` checks read
-  agent-browser's default snapshot, which lists interactive elements and headings but not plain text, so a check such
-  as "You and Tim Kilroy are now connected" is never seen even when the task succeeded. The ground truth above does not
-  use those checks; the main runs replay without them. Reading the snapshot with `interactive: false` would fix it.
-- **Not run.** The model suite needs the `claude` CLI: when this ran, the subscription had hit its weekly usage limit
-  (one probe call, zero tokens), so `bench/model.ts` is ready but has no results. Stagehand and Midscene need a funded
-  model key: the OpenRouter account had no balance (the runner checks with a free call and stops). Passmark caches steps
-  in Redis and wants both an Anthropic and a Google model, so it has no adapter. browser-use is a Python agent with no
-  comparable cache-and-replay mode, so it has no adapter either. "MCP vs. CLI + SKILL.md" was not measured:
-  agent-steps only exposes recording through its MCP server today.
+- **A bug the bench found and fixed.** agent-steps' `text-visible` checks first read agent-browser's default snapshot,
+  which lists only what can be acted on, so a check such as "You and Tim Kilroy are now connected" was never seen and 4
+  of 5 replays reported failure after succeeding. Checks now read the whole page (`interactive: false`); the run above
+  is after the fix, and the ground truth never used those checks.
+- **The model suite's replays get the recipe's inputs.** The checkout recording saved `{name}`, `{street}`, `{city}`
+  and `{postal}` as inputs; the replays pass the values a caller would know for them. A first run without them stopped
+  safely at the first input on every replay, and was thrown away.
+- **Model suite cost.** The model suite ran Claude Code against OpenRouter (`--via openrouter`) because the
+  subscription had hit its weekly limit; the cost is OpenRouter's own bill for the key, read before and after. Stagehand
+  and Midscene used `google/gemini-3-flash-preview`, so their costs are not comparable with the Claude runs.
+- **Not run.** Passmark caches steps in Redis and wants both an Anthropic and a Google model, so it has no adapter.
+  browser-use is a Python agent with no comparable cache-and-replay mode, so it has no adapter either. "MCP vs. CLI +
+  SKILL.md" was not measured: agent-steps only exposes recording through its MCP server today.
 - **Versions of the other tools.** Stagehand is pinned to 3.7.3, the last 3.x: it keeps act() results in a local
   `cacheDir` and, on a miss, self-heals with the model and rewrites the entry. Stagehand 4 moved caching to a
   server-side option of its hosted runtime, which a local bench cannot measure. Midscene is pinned to 1.17.5 with

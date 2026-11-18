@@ -122,13 +122,27 @@ function modelSection(result: { file: string; data: { meta: Record<string, unkno
 }
 
 interface CachedRecord { tool: string; task: string; variant: string; outcome: Outcome; llmCalls: number; costUsd: number; ms: number }
-function cachedSection(result: { file: string; data: { meta: Record<string, unknown>; records: CachedRecord[]; firstRuns: Record<string, Record<string, { ok: boolean; attempts: number }>> } } | null): string {
+function cachedSection(result: { file: string; data: { meta: Record<string, unknown>; records: CachedRecord[]; firstRuns: Record<string, Record<string, { ok: boolean; attempts: number }>> } } | null, noModelRuns: Run[]): string {
   if (!result) {
     return "**Not run yet.** The adapters and the runner are in `bench/cached.ts`; they need a funded `OPENROUTER_API_KEY` (or `OPENAI_API_KEY` + `OPENAI_BASE_URL`) in `bench/.env`. When this was written the key was present but the OpenRouter account had no balance (the runner checks the balance with a free call first and stops), so there are no numbers for Stagehand or Midscene here.";
   }
   const { meta, records } = result.data;
   const lines: string[] = [];
   lines.push(`Results file: [\`bench/results/${result.file}\`](bench/results/${result.file}) · model \`${meta.model}\` via ${meta.endpoint} · Stagehand ${meta.stagehand} · Midscene ${meta.midscene} · spend $${meta.spendUsd}.`);
+  lines.push("");
+  // Side by side with agent-steps' own no-model replays of the same tasks and variants.
+  lines.push("Side by side, all six tasks, N = 5 (success / safe failure / dangerous):");
+  lines.push("");
+  lines.push("| Tool | How it replays | 5 changed variants | Target removed (stopping is right) | Replays that called a model |");
+  lines.push("| --- | --- | --- | --- | --- |");
+  const mine = noModelRuns.filter((run) => run.contender === "agent-steps");
+  lines.push(`| agent-steps | saved steps, no model | ${trio(mine.filter((run) => PERTURBED.includes(run.variant)))} | ${trio(mine.filter((run) => run.variant === "removed"))} | 0 |`);
+  for (const tool of [...new Set(records.map((record) => record.tool))]) {
+    const replays = records.filter((record) => record.tool === tool && record.variant !== "first-run");
+    lines.push(`| ${tool} | cache, model when the cache misses | ${trio(replays.filter((record) => PERTURBED.includes(record.variant)) as never)} | ${trio(replays.filter((record) => record.variant === "removed") as never)} | ${replays.filter((record) => record.llmCalls > 0).length}/${replays.length} |`);
+  }
+  lines.push("");
+  lines.push("Every run, by variant:");
   lines.push("");
   lines.push("| Tool | Variant | Success / safe / dangerous | Runs with a model call | Model cost |");
   lines.push("| --- | --- | --- | --- | --- |");
@@ -196,7 +210,7 @@ const generated = [
   model ? modelSection(model) : "**Not run yet.** `npm run bench:model` needs the `claude` CLI, signed in.\n",
   "#### Other \"cache, then replay\" tools: Stagehand and Midscene.js",
   "",
-  cachedSection(cached),
+  cachedSection(cached, noModel.data.runs),
   END,
 ].join("\n");
 
