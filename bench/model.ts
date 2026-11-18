@@ -7,8 +7,7 @@
 //   [--via subscription|openrouter] [--budget 6]
 // With --via openrouter, Claude Code runs with a clean environment pointed at OpenRouter (OPENROUTER_API_KEY from
 // bench/.env), the model defaults to anthropic/claude-sonnet-5.5, and the real spend is read from the key's usage.
-import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -17,11 +16,8 @@ import { describeOutcome } from "./contenders/agent-steps.ts";
 import { startFixture } from "./fixture/server.ts";
 import { judge, taskById, type Outcome, type Task } from "./fixture/site.ts";
 import { agentBrowserVersion, BENCH_SESSION, findAgentBrowser, startAgentBrowser } from "./lib/agent-browser.ts";
+import { claudeRunner, estimateUsd, PRICES, tokensOf, type ClaudeRun, type ClaudeUsage } from "./lib/claude.ts";
 import { benchMeta } from "./lib/meta.ts";
-
-/** USD per million tokens for claude-sonnet-5-5 (Anthropic API list prices, November 2026). Cache writes are the
- * 5-minute kind, at 1.25x the input price. */
-export const PRICES = { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.1 };
 
 // Read before anything runs, so the commit is the one that was measured.
 const startMeta = benchMeta();
@@ -38,22 +34,7 @@ const { values } = parseArgs({
     out: { type: "string" },
   },
 });
-const viaOpenRouter = values.via === "openrouter";
-const model = values.model ?? (viaOpenRouter ? "anthropic/claude-sonnet-5.5" : "claude-sonnet-5-5");
 const budget = Number(values.budget);
-const envFile = join(import.meta.dirname, ".env");
-if (viaOpenRouter && existsSync(envFile)) process.loadEnvFile(envFile);
-const openRouterKey = process.env.OPENROUTER_API_KEY;
-if (viaOpenRouter && !openRouterKey) throw new Error("--via openrouter needs OPENROUTER_API_KEY in bench/.env or the environment");
-/** What the OpenRouter key has spent so far, read with a free call. */
-async function openRouterUsage(): Promise<number | null> {
-  try {
-    const answer = (await (await fetch("https://openrouter.ai/api/v1/key", { headers: { authorization: `Bearer ${openRouterKey}` } })).json()) as { data?: { usage: number } };
-    return answer.data?.usage ?? null;
-  } catch {
-    return null;
-  }
-}
 const reps = Number(values.reps);
 const b2Reps = Number(values.b2);
 const maxRuns = Number(values["max-runs"]);
@@ -68,14 +49,6 @@ const repo = join(import.meta.dirname, "..");
 const log = (text: string) => process.stderr.write(`${text}\n`);
 
 const env = { ...BENCH_SESSION };
-/** The environment Claude Code runs in: the caller's, or a clean one pointed at OpenRouter, so a desktop app's or a
- * subscription's sign-in is never used and never billed. */
-const claudeEnv: NodeJS.ProcessEnv = viaOpenRouter
-  ? {
-    HOME: process.env.HOME, PATH: process.env.PATH, CLAUDE_CONFIG_DIR: join(work, "claude-config"),
-    ANTHROPIC_BASE_URL: "https://openrouter.ai/api", ANTHROPIC_AUTH_TOKEN: openRouterKey, ANTHROPIC_API_KEY: "",
-  }
-  : process.env;
 const browserOnly = join(work, "mcp-browser.json");
 writeFileSync(browserOnly, JSON.stringify({ mcpServers: { browser: { command: abBin, args: ["mcp"], env } } }));
 const withSteps = join(work, "mcp-steps.json");
@@ -83,51 +56,7 @@ writeFileSync(withSteps, JSON.stringify({
   mcpServers: { browser: { command: process.execPath, args: [join(repo, "src", "bin.ts"), "mcp", "--driver", "agent-browser", "--store", storeFolder, "--", abBin, "mcp"], env } },
 }));
 
-interface ClaudeUsage { input_tokens?: number; output_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number }
-interface ClaudeRun {
-  ok: boolean;
-  ms: number;
-  turns: number | null;
-  usage: ClaudeUsage | null;
-  cliCostUsd: number | null;
-  result: string;
-  error?: string;
-}
-
-let claudeRuns = 0;
-function runClaude(prompt: string, mcpConfig: string): Promise<ClaudeRun> {
-  claudeRuns++;
-  const args = [
-    "-p", prompt, "--model", model, "--output-format", "json",
-    "--strict-mcp-config", "--mcp-config", mcpConfig, "--tools", "", "--allowedTools", "mcp__browser",
-    "--disable-slash-commands", "--no-session-persistence",
-  ];
-  const cwd = mkdtempSync(join(work, "cwd-"));
-  const started = performance.now();
-  return new Promise((resolve) => {
-    const child = spawn("claude", args, { cwd, env: claudeEnv, stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-    const timer = setTimeout(() => child.kill("SIGTERM"), 8 * 60_000);
-    child.on("close", () => {
-      clearTimeout(timer);
-      const ms = performance.now() - started;
-      try {
-        const parsed = JSON.parse(stdout) as { is_error?: boolean; num_turns?: number; usage?: ClaudeUsage; total_cost_usd?: number; result?: string };
-        resolve({ ok: parsed.is_error !== true, ms, turns: parsed.num_turns ?? null, usage: parsed.usage ?? null, cliCostUsd: parsed.total_cost_usd ?? null, result: (parsed.result ?? "").slice(0, 400) });
-      } catch {
-        resolve({ ok: false, ms, turns: null, usage: null, cliCostUsd: null, result: "", error: `${stderr || stdout}`.slice(0, 400) });
-      }
-    });
-  });
-}
-
-const tokens = (usage: ClaudeUsage | null) => usage ? (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) : null;
-const estimate = (usage: ClaudeUsage | null) => usage
-  ? ((usage.input_tokens ?? 0) * PRICES.input + (usage.output_tokens ?? 0) * PRICES.output + (usage.cache_creation_input_tokens ?? 0) * PRICES.cacheWrite + (usage.cache_read_input_tokens ?? 0) * PRICES.cacheRead) / 1e6
-  : null;
+const claude = await claudeRunner({ work, via: values.via, ...(values.model ? { model: values.model } : {}) });
 
 const requestFor = (task: Task) => task.request.replaceAll("{base}", fixture.url);
 const DONE = "Use only the browser tools. Read a snapshot before acting and act on the @refs it gives. When you are finished, answer DONE or FAILED and one sentence.";
@@ -154,21 +83,11 @@ const push = (record: ModelRecord) => {
 const fromClaude = (task: Task, arm: ModelRecord["arm"], rep: number, run: ClaudeRun): ModelRecord => {
   const verdict = judge(task, "base", fixture.events());
   return {
-    task: task.id, arm, rep, outcome: verdict.outcome, reason: verdict.reason, ms: Math.round(run.ms), tokens: tokens(run.usage), usage: run.usage,
-    estCostUsd: estimate(run.usage), cliCostUsd: run.cliCostUsd, turns: run.turns, note: run.error ?? run.result,
+    task: task.id, arm, rep, outcome: verdict.outcome, reason: verdict.reason, ms: Math.round(run.ms), tokens: tokensOf(run.usage), usage: run.usage,
+    estCostUsd: estimateUsd(run.usage), cliCostUsd: run.cliCostUsd, turns: run.turns, note: run.error ?? run.result,
   };
 };
-const usageAtStart = viaOpenRouter ? await openRouterUsage() : null;
-let spent = 0;
-const budgetLeft = () => claudeRuns < maxRuns && spent < budget;
-/** A run that failed without spending a token means the CLI cannot work (signed out, a usage limit): stop at once. */
-const usable = async (pending: Promise<ClaudeRun>): Promise<ClaudeRun> => {
-  const run = await pending;
-  if (!run.ok && !tokens(run.usage)) throw new Error(`claude CLI unavailable: ${(run.error ?? run.result).slice(0, 200)}`);
-  if (viaOpenRouter && usageAtStart !== null) spent = ((await openRouterUsage()) ?? usageAtStart) - usageAtStart;
-  else spent += estimate(run.usage) ?? 0;
-  return run;
-};
+const budgetLeft = () => claude.runs() < maxRuns && claude.spentUsd() < budget;
 let aborted: string | null = null;
 
 const ab = await startAgentBrowser(abBin);
@@ -181,14 +100,14 @@ try {
     // A: the agent does it every time.
     for (let rep = 0; rep < reps && budgetLeft(); rep++) {
       fixture.reset(task.id, "base");
-      push(fromClaude(task, "A", rep, await usable(runClaude(`${requestFor(task)}\n\n${DONE}`, browserOnly))));
+      push(fromClaude(task, "A", rep, await claude.run(`${requestFor(task)}\n\n${DONE}`, browserOnly)));
     }
 
     // B: the agent once, recorded; then replays with no model.
     if (!budgetLeft()) continue;
     fixture.reset(task.id, "base");
     const recordPrompt = `${requestFor(task)}\n\nRecord this as a reusable recipe: first call steps_start with name "${task.title}", then do the task, then call steps_stop with checks listing one short text that is visible on the page when the task is done. ${DONE}`;
-    const recorded = await usable(runClaude(recordPrompt, withSteps));
+    const recorded = await claude.run(recordPrompt, withSteps);
     push(fromClaude(task, "B-record", 0, recorded));
     const recipe = store.list().find((candidate) => candidate.name === task.title);
     recordingNotes[task.id] = recipe ? `${recipe.steps.length} steps, checks ${JSON.stringify(recipe.checks.map((check) => check.text))}` : `no recipe saved (${recorded.result.slice(0, 200)})`;
@@ -213,7 +132,7 @@ try {
     for (let rep = 0; rep < b2Reps && recipe && budgetLeft(); rep++) {
       fixture.reset(task.id, "base");
       const prompt = `${requestFor(task)}\n\nA saved recipe may already do this: check steps_list and, if one fits, run it with steps_run instead of doing the steps yourself. ${DONE}`;
-      push(fromClaude(task, "B2", rep, await usable(runClaude(prompt, withSteps))));
+      push(fromClaude(task, "B2", rep, await claude.run(prompt, withSteps)));
     }
   }
 } catch (caught) {
@@ -228,25 +147,16 @@ if (!records.length) {
   process.exit(3);
 }
 
-let cliVersion = "unknown";
-try {
-  cliVersion = (await new Promise<string>((resolve) => {
-    const child = spawn("claude", ["--version"]);
-    let text = "";
-    child.stdout.on("data", (chunk: Buffer) => { text += chunk.toString(); });
-    child.on("close", () => resolve(text.trim()));
-  }));
-} catch {
-  // keep unknown
-}
-
 const result = {
   suite: "model",
-  meta: { ...startMeta, model, via: values.via, openRouterSpendUsd: viaOpenRouter ? Number(spent.toFixed(4)) : null, claudeCli: cliVersion, agentBrowser: agentBrowserVersion(abBin), reps, b2Reps, claudeRuns, prices: PRICES, aborted },
+  meta: {
+    ...startMeta, model: claude.model, via: claude.via, openRouterSpendUsd: claude.via === "openrouter" ? Number(claude.spentUsd().toFixed(4)) : null, claudeCli: await claude.version(),
+    agentBrowser: agentBrowserVersion(abBin), reps, b2Reps, claudeRuns: claude.runs(), prices: PRICES, aborted,
+  },
   recordings: recordingNotes,
   records,
 };
 const out = values.out ?? join(import.meta.dirname, "results", `model-${result.meta.date.slice(0, 10)}.json`);
 mkdirSync(join(out, ".."), { recursive: true });
 writeFileSync(out, `${JSON.stringify(result, null, 1)}\n`);
-log(`wrote ${out} (${claudeRuns} claude runs)`);
+log(`wrote ${out} (${claude.runs()} claude runs)`);
