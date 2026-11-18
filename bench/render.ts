@@ -1,7 +1,8 @@
 // Renders the newest results in bench/results/ into the README's benchmark section (between the bench markers) and
-// draws bench/results/no-model.svg. node bench/render.ts [--check]
+// draws the three charts it shows (bench/results/*.svg). node bench/render.ts
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { outcomeBars, pairedBars, singleBars } from "./charts.ts";
 import { VARIANTS, type Outcome } from "./fixture/site.ts";
 
 const RESULTS = join(import.meta.dirname, "results");
@@ -40,8 +41,6 @@ function noModelSection(result: { file: string; data: { meta: Record<string, unk
   const perVariant = runs.filter((run) => run.contender === contenders[0] && run.task === tasks[0]).length / VARIANTS.length;
   const lines: string[] = [];
   lines.push(`Results file: [\`bench/results/${result.file}\`](bench/results/${result.file}) · ${meta.date} · Node ${meta.node} · Playwright ${meta.playwright} (Chromium ${meta.chromium}) · agent-browser ${meta.agentBrowser} · agent-steps ${meta.agentStepsCommit} · ${meta.machine}, ${meta.os} · N = ${meta.n} per cell · action timeout ${meta.actionTimeoutMs} ms.`);
-  lines.push("");
-  lines.push(`![Outcomes on the perturbed variants](bench/results/no-model.svg)`);
   lines.push("");
   lines.push(`**Summary.** ${tasks.length} tasks × ${VARIANTS.length} variants × ${perVariant} runs per contender. "Perturbed" is the five variants where the task can still be done (moved, renamed, relabeled, overlay, duplicate); on "removed" the only good outcome is a safe stop.`);
   lines.push("");
@@ -91,6 +90,8 @@ function noModelSection(result: { file: string; data: { meta: Record<string, unk
   return lines.join("\n");
 }
 
+const MODEL_NAME: Record<string, string> = { "anthropic/claude-sonnet-5.5": "Claude Sonnet 5.5", "claude-sonnet-5-5": "Claude Sonnet 5.5" };
+const TASK_LABEL: Record<string, string> = { invites: "Accept one invitation", checkout: "Fill a 3-page order form", search: "Search, open a result" };
 interface ModelRecord { task: string; arm: string; rep: number; outcome: Outcome; ms: number; tokens: number | null; estCostUsd: number | null; cliCostUsd: number | null; note: string }
 function modelSection(result: { file: string; data: { meta: Record<string, unknown>; records: ModelRecord[]; recordings: Record<string, string> } }): string {
   const { meta, records, recordings } = result.data;
@@ -157,50 +158,66 @@ function cachedSection(result: { file: string; data: { meta: Record<string, unkn
   return lines.join("\n");
 }
 
-function chart(runs: Run[]): string {
-  const contenders = [...new Set(runs.map((run) => run.contender))];
-  const width = 720;
-  const left = 230;
-  const barWidth = width - left - 30;
-  const row = 34;
-  const top = 40;
-  const height = top + contenders.length * row + 40;
-  const colors = { success: "#2f8f4e", safe: "#9aa5b1", dangerous: "#c2412d" };
-  const parts: string[] = [];
-  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="-apple-system, system-ui, sans-serif" font-size="13">`);
-  parts.push(`<rect width="100%" height="100%" fill="#ffffff"/>`);
-  parts.push(`<text x="16" y="24" font-weight="600" fill="#1b1f24">Outcomes on the five perturbed variants (no model)</text>`);
-  contenders.forEach((contender, index) => {
-    const mine = runs.filter((run) => run.contender === contender && PERTURBED.includes(run.variant));
-    const y = top + index * row;
-    parts.push(`<text x="16" y="${y + 18}" fill="#1b1f24">${LABEL[contender] ?? contender}</text>`);
-    let x = left;
-    for (const outcome of ["success", "safe", "dangerous"] as const) {
-      const share = mine.length ? count(mine, outcome) / mine.length : 0;
-      const w = share * barWidth;
-      if (w > 0) parts.push(`<rect x="${x.toFixed(1)}" y="${y + 4}" width="${w.toFixed(1)}" height="20" fill="${colors[outcome]}"/>`);
-      if (w > 34) parts.push(`<text x="${(x + 6).toFixed(1)}" y="${y + 18}" fill="#ffffff">${Math.round(share * 100)}%</text>`);
-      x += w;
-    }
-  });
-  const legendY = top + contenders.length * row + 18;
-  [["success", "success"], ["safe", "safe failure (stopped)"], ["dangerous", "dangerous (wrong action)"]].forEach(([key, text], index) => {
-    const x = 16 + index * 210;
-    parts.push(`<rect x="${x}" y="${legendY - 11}" width="12" height="12" fill="${colors[key as Outcome]}"/><text x="${x + 18}" y="${legendY}" fill="#1b1f24">${text}</text>`);
-  });
-  parts.push("</svg>");
-  return `${parts.join("\n")}\n`;
-}
-
 const noModel = newest("no-model-");
 const model = newest("model-");
 const cached = newest("cached-");
 if (!noModel) throw new Error("no no-model results in bench/results/: run npm run bench first");
-writeFileSync(join(RESULTS, "no-model.svg"), chart(noModel.data.runs));
+
+// The three charts: the same six tools, in the same order, everywhere.
+const runsOf = (tool: string): Run[] => tool === "stagehand" || tool === "midscene"
+  ? ((cached?.data.records ?? []) as CachedRecord[]).filter((record) => record.tool === tool && record.variant !== "first-run").map((record) => ({ ...record, contender: tool, error: null }))
+  : (noModel.data.runs as Run[]).filter((run) => run.contender === tool);
+const TOOLS: Array<[string, string]> = [
+  ["agent-steps", "agent-steps"], ["role", "Playwright role locators"], ["css", "CSS selectors"], ["coordinates", "Click positions (macro)"],
+  ["stagehand", "Stagehand (cache + AI)"], ["midscene", "Midscene (cache + AI)"],
+];
+const shown = TOOLS.filter(([tool]) => runsOf(tool).length > 0);
+const all = shown.map(([tool, label]) => ({ label, runs: runsOf(tool) }));
+const runsEach = all[0]!.runs.length;
+writeFileSync(join(RESULTS, "wrong-actions.svg"), singleBars(
+  "Wrong actions", `Did something the task didn't ask for, out of ${runsEach} replays each (lower is better)`,
+  all.map(({ label, runs }) => ({ label, value: count(runs, "dangerous") })), runsEach, "critical",
+));
+writeFileSync(join(RESULTS, "changed-pages.svg"), outcomeBars(
+  "When the page changed", "Moved, renamed, relabeled, covered by a banner, or with a look-alike: 150 replays each",
+  all.map(({ label, runs }) => { const changed = runs.filter((run) => PERTURBED.includes(run.variant)); return { label, success: count(changed, "success"), safe: count(changed, "safe"), dangerous: count(changed, "dangerous") }; }),
+));
+const modelRecords = (model?.data.records ?? []) as ModelRecord[];
+const modelTasks = [...new Set(modelRecords.map((record) => record.task))];
+const tokensOf = (task: string, arms: string[]) => modelRecords.filter((record) => record.task === task && arms.includes(record.arm)).reduce((total, record) => total + (record.tokens ?? 0), 0);
+if (modelTasks.length) {
+  writeFileSync(join(RESULTS, "tokens.svg"), pairedBars(
+    "Tokens to do a task 10 times", `${MODEL_NAME[String(model!.data.meta.model)] ?? model!.data.meta.model}, and every run finished the task (lower is better)`,
+    ["AI does it every time", "agent-steps: AI once, then 9 replays with no AI"],
+    modelTasks.map((task) => ({ label: TASK_LABEL[task] ?? task, values: [tokensOf(task, ["A"]), tokensOf(task, ["B-record", "B-replay"])] })),
+    (value) => `${(value / 1e6).toFixed(2)} M`,
+  ));
+}
+const wrong = (label: string) => count(all.find((item) => item.label === label)?.runs ?? [], "dangerous");
+const changedShare = (label: string) => { const runs = (all.find((item) => item.label === label)?.runs ?? []).filter((run) => PERTURBED.includes(run.variant)); return pct(count(runs, "success"), runs.length); };
+const saved = modelTasks.length ? 1 - modelTasks.reduce((total, task) => total + tokensOf(task, ["B-record", "B-replay"]), 0) / modelTasks.reduce((total, task) => total + tokensOf(task, ["A"]), 0) : 0;
+const replayMs = median(modelRecords.filter((record) => record.arm === "B-replay").map((record) => record.ms));
+const agentMs = median(modelRecords.filter((record) => record.arm === "A").map((record) => record.ms));
 
 const generated = [
   START,
   "<!-- Generated by `node bench/render.ts` from bench/results/. Edit the text around it, not inside. -->",
+  "",
+  "![Wrong actions](bench/results/wrong-actions.svg)",
+  "",
+  `agent-steps never did the wrong thing. The others guessed when the page changed: ${shown.filter(([tool]) => tool !== "agent-steps" && wrong(TOOLS.find(([id]) => id === tool)![1]) > 0).map(([, label]) => `${label.replace(/ \(.*\)$/u, "")}: ${wrong(label)}`).join(", ")}.`,
+  "",
+  "![When the page changed](bench/results/changed-pages.svg)",
+  "",
+  `The price: alone, agent-steps finishes fewer changed pages (${changedShare("agent-steps")}). It stops instead of guessing, and hands the step back to the agent to fix.`,
+  "",
+  ...(modelTasks.length ? [
+    "![Tokens to do a task 10 times](bench/results/tokens.svg)",
+    "",
+    `With an AI agent, a saved recipe does the same work with ${Math.round(saved * 100)}% fewer tokens, and a replay takes ${(replayMs / 1000).toFixed(1)} s instead of ${(agentMs / 1000).toFixed(0)} s.`,
+    "",
+  ] : []),
+  "<details><summary>All the numbers</summary>",
   "",
   "#### No model: replays on BASE and on perturbed pages",
   "",
@@ -211,6 +228,8 @@ const generated = [
   "#### Other \"cache, then replay\" tools: Stagehand and Midscene.js",
   "",
   cachedSection(cached, noModel.data.runs),
+  "</details>",
+  "",
   END,
 ].join("\n");
 
