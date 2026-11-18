@@ -44,6 +44,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/declaration-imports.mjs dist",
+    "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "oxlint --deny-warnings src bench --ignore-pattern \"bench/node_modules/**\"",
     "test": "vitest run",
