@@ -58,12 +58,17 @@ async function listedPrice(model: string): Promise<{ prompt: number; completion:
   return { prompt: 5, completion: 25 }; // deliberately high when unknown, so the budget guard errs on the safe side
 }
 
-/** OpenRouter only: the account's balance, read with a free call, so nothing runs when there is none left. */
+/** OpenRouter only: what can still be spent, read with free calls, so nothing runs when there is none left. An account
+ * that reports its own credits is read from them; one that reports none (a key paid some other way) from the key's limit. */
 async function balanceLeft(): Promise<number | null> {
   if (!upstream.includes("openrouter.ai")) return null;
+  const read = async <T>(path: string): Promise<T | undefined> =>
+    ((await (await fetch(`${upstream.replace(/\/$/u, "")}${path}`, { headers: { authorization: `Bearer ${apiKey}` } })).json()) as { data?: T }).data;
   try {
-    const answer = (await (await fetch(`${upstream.replace(/\/$/u, "")}/credits`, { headers: { authorization: `Bearer ${apiKey}` } })).json()) as { data?: { total_credits: number; total_usage: number } };
-    return answer.data ? answer.data.total_credits - answer.data.total_usage : null;
+    const account = await read<{ total_credits: number; total_usage: number }>("/credits");
+    if (account && account.total_credits > 0) return account.total_credits - account.total_usage;
+    const key = await read<{ limit_remaining: number | null }>("/key");
+    return key?.limit_remaining ?? null;
   } catch {
     return null;
   }

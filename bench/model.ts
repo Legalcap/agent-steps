@@ -4,8 +4,11 @@
 //      server in front of agent-browser), then the recipe is replayed with no model for the remaining repetitions;
 //   B2 the same recipe, but the repeat is asked of Claude, which finds it with steps_list and runs it with steps_run.
 // node bench/model.ts [--reps 10] [--b2 2] [--tasks invites,checkout,search] [--model claude-sonnet-5-5] [--max-runs 40]
+//   [--via subscription|openrouter] [--budget 6]
+// With --via openrouter, Claude Code runs with a clean environment pointed at OpenRouter (OPENROUTER_API_KEY from
+// bench/.env), the model defaults to anthropic/claude-sonnet-5.5, and the real spend is read from the key's usage.
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -27,12 +30,30 @@ const { values } = parseArgs({
     reps: { type: "string", default: "10" },
     b2: { type: "string", default: "2" },
     tasks: { type: "string", default: "invites,checkout,search" },
-    model: { type: "string", default: "claude-sonnet-5-5" },
+    model: { type: "string" },
+    via: { type: "string", default: "subscription" },
+    budget: { type: "string", default: "6" },
     "max-runs": { type: "string", default: "40" },
     port: { type: "string", default: "4317" },
     out: { type: "string" },
   },
 });
+const viaOpenRouter = values.via === "openrouter";
+const model = values.model ?? (viaOpenRouter ? "anthropic/claude-sonnet-5.5" : "claude-sonnet-5-5");
+const budget = Number(values.budget);
+const envFile = join(import.meta.dirname, ".env");
+if (viaOpenRouter && existsSync(envFile)) process.loadEnvFile(envFile);
+const openRouterKey = process.env.OPENROUTER_API_KEY;
+if (viaOpenRouter && !openRouterKey) throw new Error("--via openrouter needs OPENROUTER_API_KEY in bench/.env or the environment");
+/** What the OpenRouter key has spent so far, read with a free call. */
+async function openRouterUsage(): Promise<number | null> {
+  try {
+    const answer = (await (await fetch("https://openrouter.ai/api/v1/key", { headers: { authorization: `Bearer ${openRouterKey}` } })).json()) as { data?: { usage: number } };
+    return answer.data?.usage ?? null;
+  } catch {
+    return null;
+  }
+}
 const reps = Number(values.reps);
 const b2Reps = Number(values.b2);
 const maxRuns = Number(values["max-runs"]);
@@ -47,6 +68,14 @@ const repo = join(import.meta.dirname, "..");
 const log = (text: string) => process.stderr.write(`${text}\n`);
 
 const env = { ...BENCH_SESSION };
+/** The environment Claude Code runs in: the caller's, or a clean one pointed at OpenRouter, so a desktop app's or a
+ * subscription's sign-in is never used and never billed. */
+const claudeEnv: NodeJS.ProcessEnv = viaOpenRouter
+  ? {
+    HOME: process.env.HOME, PATH: process.env.PATH, CLAUDE_CONFIG_DIR: join(work, "claude-config"),
+    ANTHROPIC_BASE_URL: "https://openrouter.ai/api", ANTHROPIC_AUTH_TOKEN: openRouterKey, ANTHROPIC_API_KEY: "",
+  }
+  : process.env;
 const browserOnly = join(work, "mcp-browser.json");
 writeFileSync(browserOnly, JSON.stringify({ mcpServers: { browser: { command: abBin, args: ["mcp"], env } } }));
 const withSteps = join(work, "mcp-steps.json");
@@ -69,14 +98,14 @@ let claudeRuns = 0;
 function runClaude(prompt: string, mcpConfig: string): Promise<ClaudeRun> {
   claudeRuns++;
   const args = [
-    "-p", prompt, "--model", values.model, "--output-format", "json",
+    "-p", prompt, "--model", model, "--output-format", "json",
     "--strict-mcp-config", "--mcp-config", mcpConfig, "--tools", "", "--allowedTools", "mcp__browser",
     "--disable-slash-commands", "--no-session-persistence",
   ];
   const cwd = mkdtempSync(join(work, "cwd-"));
   const started = performance.now();
   return new Promise((resolve) => {
-    const child = spawn("claude", args, { cwd, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn("claude", args, { cwd, env: claudeEnv, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
@@ -129,10 +158,15 @@ const fromClaude = (task: Task, arm: ModelRecord["arm"], rep: number, run: Claud
     estCostUsd: estimate(run.usage), cliCostUsd: run.cliCostUsd, turns: run.turns, note: run.error ?? run.result,
   };
 };
-const budgetLeft = () => claudeRuns < maxRuns;
+const usageAtStart = viaOpenRouter ? await openRouterUsage() : null;
+let spent = 0;
+const budgetLeft = () => claudeRuns < maxRuns && spent < budget;
 /** A run that failed without spending a token means the CLI cannot work (signed out, a usage limit): stop at once. */
-const usable = (run: ClaudeRun): ClaudeRun => {
+const usable = async (pending: Promise<ClaudeRun>): Promise<ClaudeRun> => {
+  const run = await pending;
   if (!run.ok && !tokens(run.usage)) throw new Error(`claude CLI unavailable: ${(run.error ?? run.result).slice(0, 200)}`);
+  if (viaOpenRouter && usageAtStart !== null) spent = ((await openRouterUsage()) ?? usageAtStart) - usageAtStart;
+  else spent += estimate(run.usage) ?? 0;
   return run;
 };
 let aborted: string | null = null;
@@ -147,14 +181,14 @@ try {
     // A: the agent does it every time.
     for (let rep = 0; rep < reps && budgetLeft(); rep++) {
       fixture.reset(task.id, "base");
-      push(fromClaude(task, "A", rep, usable(await runClaude(`${requestFor(task)}\n\n${DONE}`, browserOnly))));
+      push(fromClaude(task, "A", rep, await usable(runClaude(`${requestFor(task)}\n\n${DONE}`, browserOnly))));
     }
 
     // B: the agent once, recorded; then replays with no model.
     if (!budgetLeft()) continue;
     fixture.reset(task.id, "base");
     const recordPrompt = `${requestFor(task)}\n\nRecord this as a reusable recipe: first call steps_start with name "${task.title}", then do the task, then call steps_stop with checks listing one short text that is visible on the page when the task is done. ${DONE}`;
-    const recorded = usable(await runClaude(recordPrompt, withSteps));
+    const recorded = await usable(runClaude(recordPrompt, withSteps));
     push(fromClaude(task, "B-record", 0, recorded));
     const recipe = store.list().find((candidate) => candidate.name === task.title);
     recordingNotes[task.id] = recipe ? `${recipe.steps.length} steps, checks ${JSON.stringify(recipe.checks.map((check) => check.text))}` : `no recipe saved (${recorded.result.slice(0, 200)})`;
@@ -176,7 +210,7 @@ try {
     for (let rep = 0; rep < b2Reps && recipe && budgetLeft(); rep++) {
       fixture.reset(task.id, "base");
       const prompt = `${requestFor(task)}\n\nA saved recipe may already do this: check steps_list and, if one fits, run it with steps_run instead of doing the steps yourself. ${DONE}`;
-      push(fromClaude(task, "B2", rep, usable(await runClaude(prompt, withSteps))));
+      push(fromClaude(task, "B2", rep, await usable(runClaude(prompt, withSteps))));
     }
   }
 } catch (caught) {
@@ -205,7 +239,7 @@ try {
 
 const result = {
   suite: "model",
-  meta: { ...startMeta, model: values.model, claudeCli: cliVersion, agentBrowser: agentBrowserVersion(abBin), reps, b2Reps, claudeRuns, prices: PRICES, aborted },
+  meta: { ...startMeta, model, via: values.via, openRouterSpendUsd: viaOpenRouter ? Number(spent.toFixed(4)) : null, claudeCli: cliVersion, agentBrowser: agentBrowserVersion(abBin), reps, b2Reps, claudeRuns, prices: PRICES, aborted },
   recordings: recordingNotes,
   records,
 };

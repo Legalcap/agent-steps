@@ -96,9 +96,9 @@ function modelSection(result: { file: string; data: { meta: Record<string, unkno
   const { meta, records, recordings } = result.data;
   const lines: string[] = [];
   const prices = meta.prices as Record<string, number>;
-  lines.push(`Results file: [\`bench/results/${result.file}\`](bench/results/${result.file}) · ${meta.date} · model \`${meta.model}\` through Claude Code ${meta.claudeCli} (\`claude -p\`, signed in with a subscription) · agent-browser ${meta.agentBrowser} · ${meta.claudeRuns} Claude runs in total.`);
+  lines.push(`Results file: [\`bench/results/${result.file}\`](bench/results/${result.file}) · ${meta.date} · model \`${meta.model}\` through Claude Code ${meta.claudeCli} (\`claude -p\`, ${meta.via === "openrouter" ? "routed through OpenRouter" : "signed in with a subscription"}) · agent-browser ${meta.agentBrowser} · ${meta.claudeRuns} Claude runs in total.`);
   lines.push("");
-  lines.push(`Cost is estimated from the token counts Claude Code reports, at $${prices.input} / $${prices.output} per million input / output tokens, $${prices.cacheWrite} per million cache-write and $${prices.cacheRead} per million cache-read tokens (API list prices for this model). "CLI cost" is Claude Code's own \`total_cost_usd\`. Neither was billed: the runs used a subscription.`);
+  lines.push(`Cost is estimated from the token counts Claude Code reports, at $${prices.input} / $${prices.output} per million input / output tokens, $${prices.cacheWrite} per million cache-write and $${prices.cacheRead} per million cache-read tokens (API list prices for this model). "CLI cost" is Claude Code's own \`total_cost_usd\`. ${meta.via === "openrouter" ? `Billed by OpenRouter for the whole suite: $${Number(meta.openRouterSpendUsd).toFixed(2)}.` : "Neither was billed: the runs used a subscription."}`);
   lines.push("");
   lines.push("| Task | Approach | Runs | Success | Dangerous | Tokens (total) | Est. cost | CLI cost | Wall time (total) |");
   lines.push("| --- | --- | --- | --- | --- | --- | --- | --- | --- |");
