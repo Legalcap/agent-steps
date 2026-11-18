@@ -45,7 +45,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/declaration-imports.mjs dist",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "bench:install": "npm install --prefix bench && cd bench && npx playwright install chromium-headless-shell",
+    "bench": "node bench/run.ts && node bench/render.ts",
+    "bench:model": "node bench/model.ts && node bench/render.ts",
+    "bench:cached": "node bench/cached.ts && node bench/render.ts",
+    "bench:render": "node bench/render.ts",
+    "bench:typecheck": "tsc -p bench/tsconfig.json"
   },
   "dependencies": {
     "zod": "4.6.7"

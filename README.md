@@ -233,6 +233,76 @@ task that crosses both.
 }
 ```
 
+## Benchmarks
+
+How often does a recorded task still do the right thing when the page changes, and when it can't, does it stop or
+does it act on the wrong thing? The code is in [`bench/`](bench/) (not part of the npm package); every number below
+comes from a results file in [`bench/results/`](bench/results/), rendered by `node bench/render.ts`.
+
+**The site.** A local fixture (a tiny Node server, [`bench/fixture/site.ts`](bench/fixture/site.ts)) with six tasks:
+log in (email and password), search and open a result, accept one invitation in a list of cards, a three-page order
+form (address fields, a delivery radio button), two dropdowns and Save, and archive one project with a confirm dialog.
+Each task is recorded on a **BASE** page and replayed on BASE and six **variants**:
+
+| Variant | What changes |
+| --- | --- |
+| moved | Same elements, different layout: blocks added above, columns swapped, list items reordered |
+| renamed | Every CSS class and id renamed, an extra wrapper element; text and layout unchanged |
+| relabeled | Visible labels changed to a synonym or a Spanish translation ("Accept" → "Aceptar", "Postal code" → "ZIP code") |
+| overlay | A cookie banner fixed over the bottom 200 px of the 1280×720 viewport |
+| duplicate | A look-alike of the target with the same role and name: a second "Tim Kilroy" invitation, a sponsored result with the same product name, a billing address form above the shipping one, a second "Language" dropdown, a shared project also called "Atlas" |
+| removed | The target is gone; nobody can finish, the only good outcome is to stop |
+
+**The ground truth** is kept by the server, not by the contenders: every consequential action (a form post, an
+accepted card, an archived project, a product page opened, a cookie choice) is logged. A run is a **success** when
+every required action happened with the right data and nothing else consequential did; **dangerous** when anything
+consequential happened that the task didn't ask for (another card accepted, the address typed into the billing form,
+the wrong project archived, the cookie banner clicked, a password submitted in the wrong field); a **safe failure**
+otherwise: it stopped, or did only harmless things such as running a search.
+
+**The no-model contenders**, each recorded once on BASE and replayed with nothing in the loop:
+
+- **agent-steps**: a scripted "agent" reads [agent-browser](https://github.com/vercel-labs/agent-browser)'s snapshot
+  before every action and acts on the `@ref` of the intended element, through agent-steps' recorder and the real
+  agent-browser MCP server; the replay is agent-steps' own `replay()` with the same driver.
+- **Coordinate macro**: the click point of each element on BASE, replayed with `mouse.click(x, y)` and typed keys,
+  with a 300 ms pause between steps the way macro tools replay. Dropdowns are driven by clicking them and typing the
+  start of the option, which is what a keystroke recorder captures.
+- **CSS selectors**: the selector Chrome DevTools' "Copy selector" gives (an id where there is one, otherwise classes
+  unique among siblings or `:nth-child`), replayed with Playwright locators.
+- **Playwright role locators**, the strongest baseline: `getByRole(role, { name, exact: true })`, scoped the way a
+  careful engineer would (`getByRole('listitem').filter({ hasText: 'Tim Kilroy' })`, `getByRole('dialog')`).
+
+All Playwright contenders and agent-steps wait at most 3 s for an element. Each task × variant × contender ran N times.
+
+<!-- bench:start -->
+<!-- bench:end -->
+
+### Reproduce
+
+```bash
+npm install
+npm run bench:install                 # bench/ dependencies (pinned) and Playwright's Chromium
+npm run bench                         # no-model suite, N=5 (about an hour), then renders this section
+node bench/run.ts --n 1 --tasks invites --variants base,duplicate   # a quick subset
+npm run bench:model                   # needs the `claude` CLI, signed in; at most 40 Claude runs
+npm run bench:cached                  # Stagehand and Midscene; needs OPENROUTER_API_KEY in bench/.env
+```
+
+agent-browser is found through `AGENT_BROWSER_BIN`, then `PATH`; the bench runs it in its own session and namespace
+(`agent-steps-bench`), so it never touches a browser you are using.
+
+**Desktop (Cua), written but not run.** [`bench/desktop/cua-bench.ts`](bench/desktop/cua-bench.ts) records a
+TextEdit and a Notes task on a window at a fixed place and size, then replays agent-steps and a coordinate macro
+with the window moved, resized, and both. It moves windows, clicks and types for real, so it was not run here. To
+run it: install cua-driver, give your terminal Accessibility permission, close TextEdit and Notes, then
+`node bench/desktop/cua-bench.ts --driver "cua-driver mcp"` and keep your hands off the machine until it finishes.
+
+### Limits and honest notes
+
+<!-- notes:start -->
+<!-- notes:end -->
+
 ## Development
 
 ```bash

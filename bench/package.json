@@ -1,0 +1,14 @@
+{
+  "name": "agent-steps-bench",
+  "private": true,
+  "type": "module",
+  "description": "Benchmarks for agent-steps. Not part of the published package.",
+  "dependencies": {
+    "playwright": "1.64.1"
+  },
+  "optionalDependencies": {
+    "@browserbasehq/stagehand": "3.7.3",
+    "@midscene/web": "1.17.5",
+    "@playwright/test": "1.64.1"
+  }
+}
