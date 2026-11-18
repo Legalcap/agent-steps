@@ -141,12 +141,25 @@ flowchart TB
 
 ## Safety
 
-Some steps are never saved, so they are never repeated without the agent deciding again:
+A replay has no model to notice that something is off, so agent-steps is built to stop rather than guess.
 
-- final actions: send, delete, pay, submit, post, publish and their like, in 16 languages;
-- anything typed into a password or other secret field;
+**Never saved**, so never repeated without the agent deciding again:
+
+- final actions it can recognise by name: send, delete, pay, submit, post, publish, merge, deploy, refund, sign out
+  and their like, in 16 languages;
+- anything typed into a password or other secret field, and any typed text that looks like a key or token (pass those
+  as inputs: an input is given at each run and never stored);
 - flipping a checkbox whose state wasn't read first;
-- acting by pixel position (an optional position hint exists for Cua, off by default).
+- acting by pixel position. There is no fallback to a point on the screen.
+
+**Checked again at every run**, wherever the recipe came from: `replay()` refuses a recipe that would not load, and
+checks each step once more after its inputs are filled in, so an input cannot turn a step into a final action. A step
+recorded on one page does not run on another, and a recipe unused for 60 days is deleted from the folder.
+
+**What this does not promise.** "Final action" is a list of words, not a proof. A button called "Accept", "Continue"
+or "Yes" is saved, even where pressing it matters. Two things cover that: `steps_stop` answers with every step the
+recipe will repeat, so whoever recorded it sees them; and a host that needs a person's yes passes `approve` to
+`replay()`, which is asked before each step.
 
 The `strict` policy (used by Openpals) also only saves a recipe when the typed text and links appear in the person's
 own request, and refuses requests that depend on the moment ("the latest", "this one").

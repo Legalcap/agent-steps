@@ -1,6 +1,6 @@
 {
   "name": "agent-steps",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Record what an AI agent does in a browser (agent-browser) or on a desktop (Cua) and repeat it without a model, finding each target again by what it is.",
   "license": "MIT",
   "author": "Borja Soler",
