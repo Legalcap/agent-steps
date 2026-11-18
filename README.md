@@ -198,6 +198,20 @@ Codex (`~/.codex/config.toml`) and Cursor (`.cursor/mcp.json`) take the same com
 A good instruction for your agent: *"Before a browser or desktop task, check `steps_list`. If a recipe fits, use
 `steps_run`; otherwise wrap the task in `steps_start` and `steps_stop`."*
 
+What the agent is told along the way:
+
+- `steps_start` answers with what to keep to while recording (act on refs from a snapshot, no JavaScript, no tabs, no
+  final buttons).
+- A call that makes the recording unsavable says so at once, instead of at `steps_stop` when the task is done.
+- `steps_stop` lists every step the recipe will repeat, keeps a check only if the page says it at that moment, and
+  explains a refusal.
+
+Options: `--store <folder>` (default `~/.agent-steps/recipes`), `--wait <seconds>` for slow pages (3 by default), and
+`--full-answers`. Without it, a browser's answers are passed on as their text alone: agent-browser repeats each answer
+several times over in its structured part, which made large pages too long for the agent to read.
+
+What it does not record: several tabs, running JavaScript, file uploads, drags, and anything in [Safety](#safety).
+
 ## Use it as a library
 
 ```ts
@@ -256,36 +270,53 @@ versions of it. The site's own log decides what really happened.
 
 ![Wrong actions](bench/results/wrong-actions.svg)
 
-agent-steps never did the wrong thing. The others guessed when the page changed: Click positions: 25, Stagehand: 60, Midscene: 45.
+On its own, agent-steps never did the wrong thing; with the AI finishing what stops, 1 of 42. The ones that guess: Click positions (macro): 5, Stagehand + Claude Sonnet 5.5: 10, Stagehand + Gemini 3 Flash: 12, Midscene + Gemini 3 Flash: 9.
 
 ![When the page changed](bench/results/changed-pages.svg)
 
-The price: alone, agent-steps finishes fewer changed pages (43%). It stops instead of guessing, and hands the step back to the agent to fix.
+Alone, agent-steps finishes 47% of changed pages and stops on the rest. With the AI taking over where it stops, 97%.
 
-![Tokens to do a task 10 times](bench/results/tokens.svg)
+![What one repeat costs](bench/results/cost.svg)
 
-With an AI agent, a saved recipe does the same work with 84% fewer tokens, and a replay takes 0.7 s instead of 9 s.
+A repeat costs nothing and takes 0.7 s when your app runs the recipe, against 4.2¢ and 9 s for the AI doing it again. When the AI itself calls the recipe over MCP the saving is small (2.9¢, 7 s): most of the cost is the AI's own turn. Recording once costs 5.5¢.
+
+**On pages we did not write** (15 tasks from Stagehand's own eval suite, Claude Sonnet 5.5): the AI did 15 of 15 on its own. agent-steps saved a recipe for 13 (8 at the first try, the rest after the AI recorded again) and for 2 never. 39 of 39 replays of the saved ones finished the task with no AI. That run found bugs, fixed since: before the fixes 36 of 39 replays finished, and agent-steps reported 9 failures where 3 were real.
 
 <details><summary>All the numbers</summary>
 
+#### Every approach, in scenarios
+
+A scenario is one task on one version of the page. It counts as finished only if every repeat finished, and as wrong if any repeat did something the task didn't ask for.
+
+| Approach | Same page: finished | Changed pages: finished / stopped / wrong | Target gone: stopped / wrong |
+| --- | --- | --- | --- |
+| agent-steps, no AI | 5/6 | 14 / 16 / 0 of 30 | 6 / 0 of 6 |
+| agent-steps + Claude Sonnet 5.5 | 6/6 | 29 / 0 / 1 of 30 | 6 / 0 of 6 |
+| Playwright role locators | 6/6 | 17 / 13 / 0 of 30 | 6 / 0 of 6 |
+| CSS selectors | 6/6 | 23 / 7 / 0 of 30 | 6 / 0 of 6 |
+| Click positions (macro) | 6/6 | 17 / 11 / 2 of 30 | 3 / 3 of 6 |
+| Stagehand + Claude Sonnet 5.5 | 6/6 | 22 / 2 / 6 of 30 | 2 / 4 of 6 |
+| Stagehand + Gemini 3 Flash | 6/6 | 21 / 2 / 7 of 30 | 1 / 5 of 6 |
+| Midscene + Gemini 3 Flash | 6/6 | 20 / 3 / 7 of 30 | 4 / 2 of 6 |
+
 #### No model: replays on BASE and on perturbed pages
 
-Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-2026-11-18.json) · 2026-11-18T17:04:26.956Z · Node v22.22.2 · Playwright 1.64.1 (Chromium 156.0.8078.4) · agent-browser 0.37.0 · agent-steps d7af9b0 · Apple M2 Pro, 10 cores, 16 GB, darwin 27.0.0 arm64 · N = 5 per cell · action timeout 3000 ms.
+Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-2026-11-18.json) · 2026-11-18T20:58:59.331Z · Node v22.22.2 · Playwright 1.64.1 (Chromium 156.0.8078.4) · agent-browser 0.37.0 · agent-steps f900b91 · Apple M2 Pro, 10 cores, 16 GB, darwin 27.0.0 arm64 · N = 5 per cell · action timeout 3000 ms.
 
 **Summary.** 6 tasks × 7 variants × 5 runs per contender. "Perturbed" is the five variants where the task can still be done (moved, renamed, relabeled, overlay, duplicate); on "removed" the only good outcome is a safe stop.
 
 | Contender | Success on BASE | Success on perturbed | Dangerous on perturbed | Safe stop on removed | Dangerous on removed | Median time on BASE |
 | --- | --- | --- | --- | --- | --- | --- |
-| agent-steps | 25/30 (83%) | 65/150 (43%) | 0/150 (0%) | 30/30 | 0/30 | 589 ms |
+| agent-steps | 25/30 (83%) | 70/150 (47%) | 0/150 (0%) | 30/30 | 0/30 | 610 ms |
 | Coordinate macro | 30/30 (100%) | 85/150 (57%) | 10/150 (7%) | 15/30 | 15/30 | 957 ms |
-| CSS selectors (DevTools style) | 30/30 (100%) | 115/150 (77%) | 0/150 (0%) | 30/30 | 0/30 | 110 ms |
-| Playwright role locators | 30/30 (100%) | 85/150 (57%) | 0/150 (0%) | 30/30 | 0/30 | 110 ms |
+| CSS selectors (DevTools style) | 30/30 (100%) | 115/150 (77%) | 0/150 (0%) | 30/30 | 0/30 | 93 ms |
+| Playwright role locators | 30/30 (100%) | 85/150 (57%) | 0/150 (0%) | 30/30 | 0/30 | 101 ms |
 
 **By variant** (success / safe failure / dangerous, out of 30 runs: 6 tasks × 5):
 
 | Contender | base | moved | renamed | relabeled | overlay | duplicate | removed |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| agent-steps | 25 / 5 / 0 | 25 / 5 / 0 | 25 / 5 / 0 | 0 / 30 / 0 | 15 / 15 / 0 | 0 / 30 / 0 | 0 / 30 / 0 |
+| agent-steps | 25 / 5 / 0 | 25 / 5 / 0 | 25 / 5 / 0 | 0 / 30 / 0 | 20 / 10 / 0 | 0 / 30 / 0 | 0 / 30 / 0 |
 | Coordinate macro | 30 / 0 / 0 | 0 / 30 / 0 | 30 / 0 / 0 | 30 / 0 / 0 | 25 / 5 / 0 | 0 / 20 / 10 | 0 / 15 / 15 |
 | CSS selectors (DevTools style) | 30 / 0 / 0 | 30 / 0 / 0 | 0 / 30 / 0 | 30 / 0 / 0 | 25 / 5 / 0 | 30 / 0 / 0 | 0 / 30 / 0 |
 | Playwright role locators | 30 / 0 / 0 | 30 / 0 / 0 | 30 / 0 / 0 | 0 / 30 / 0 | 25 / 5 / 0 | 0 / 30 / 0 | 0 / 30 / 0 |
@@ -310,7 +341,7 @@ Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-
 | checkout | Coordinate macro | SSSSS | sssss | SSSSS | SSSSS | sssss | sssss | sssss |
 | checkout | CSS selectors (DevTools style) | SSSSS | SSSSS | sssss | SSSSS | sssss | SSSSS | sssss |
 | checkout | Playwright role locators | SSSSS | SSSSS | SSSSS | sssss | sssss | sssss | sssss |
-| settings | agent-steps | SSSSS | SSSSS | SSSSS | sssss | sssss | sssss | sssss |
+| settings | agent-steps | SSSSS | SSSSS | SSSSS | sssss | SSSSS | sssss | sssss |
 | settings | Coordinate macro | SSSSS | sssss | SSSSS | SSSSS | SSSSS | sssss | sssss |
 | settings | CSS selectors (DevTools style) | SSSSS | SSSSS | sssss | SSSSS | SSSSS | SSSSS | sssss |
 | settings | Playwright role locators | SSSSS | SSSSS | SSSSS | sssss | SSSSS | sssss | sssss |
@@ -324,6 +355,20 @@ Results file: [`bench/results/no-model-2026-11-18.json`](bench/results/no-model-
 **Not recorded by agent-steps:** `login` (agent-steps refused to save the recipe: secret-field). Those rows count as safe failures for agent-steps on every variant, BASE included: it never acted.
 
 **agent-steps' own checks:** replaying each recipe once on BASE *with* its text check, agent-steps reported the right result for 5 of 5 tasks.
+
+#### agent-steps with the AI finishing what stops
+
+Results file: [`bench/results/repair-2026-11-18.json`](bench/results/repair-2026-11-18.json) · 2026-11-18T20:47:43.202Z · the saved steps run first with no model; where they stop, `anthropic/claude-sonnet-5.5` (Claude Code 2.1.322 (Claude Code)) is told how far they got and finishes in the same browser · N = 2 per scenario · 51 Claude runs · spend $1.89.
+
+| Variant | Runs: success / safe / dangerous | Finished by the saved steps alone | Handed to the AI | AI cost per handover |
+| --- | --- | --- | --- | --- |
+| base | 12 / 0 / 0 | 10/12 | 2/12 | $0.064 |
+| moved | 12 / 0 / 0 | 10/12 | 2/12 | $0.033 |
+| renamed | 12 / 0 / 0 | 10/12 | 2/12 | $0.032 |
+| relabeled | 12 / 0 / 0 | 0/12 | 12/12 | $0.048 |
+| overlay | 10 / 0 / 2 | 8/12 | 4/12 | $0.040 |
+| duplicate | 12 / 0 / 0 | 0/12 | 12/12 | $0.040 |
+| removed | 0 / 12 / 0 | 0/12 | 12/12 | $0.030 |
 
 #### With a model: the agent every time vs. agent-steps
 
@@ -345,21 +390,33 @@ Cost is estimated from the token counts Claude Code reports, at $2 / $10 per mil
 
 Recordings made by the agent in B: `invites`: 2 steps, checks ["You and Tim Kilroy are now connected"]; `checkout`: 9 steps, checks ["Review your order"]; `search`: 4 steps, checks ["Sony WH-1000XM5 Wireless Headphones"].
 
+#### On pages we did not write: Stagehand's eval sites
+
+Results file: [`bench/results/external-2026-11-18.json`](bench/results/external-2026-11-18.json) · browserbase/stagehand evals @ 8901460d69e2aef8eb639daa0b2dda3fe2e47a8f · pages served from https://browserbase.github.io/stagehand-eval-sites/sites/ · `anthropic/claude-sonnet-5.5` · one run per arm per task, three replays · spend $1.86.
+
+| Task (Stagehand eval) | AI alone | Recording | Replays, no AI: before the fixes | Replays, no AI: now |
+| --- | --- | --- | --- | --- |
+| shadow_dom | done | saved | 3/3 | 3/3 |
+| osr_in_oopif | done | saved | 3/3 | 3/3 |
+| ionwave | done | saved | 3/3 | 3/3 |
+| simple_google_search | done | saved | 3/3 | 3/3 |
+| custom_dropdown | done | saved | 3/3 | 3/3 |
+| hidden_input_dropdown | done | saved | 3/3 | 3/3 |
+| login | done | saved | 3/3 | 3/3 |
+| radio_btn | done | saved after toggle-element | 3/3 | 3/3 |
+| checkboxes | done | refused (unknown-tool, unlabelled-element) | - | - |
+| iframe_same_proc | done | saved | 3/3 | 3/3 |
+| tab_handling | done | saved after unknown-tool | 3/3 | 3/3 |
+| spif_in_osr | done | saved after unlabelled-element | 0/3 | 3/3 |
+| os_dropdown | done | saved after unknown-tool, unknown-target | 3/3 | 3/3 |
+| google_flights | done | saved after unknown-tool | 3/3 | 3/3 |
+| amazon_add_to_cart | done | refused (unknown-tool, unknown-target) | - | - |
+
 #### Other "cache, then replay" tools: Stagehand and Midscene.js
 
-Results file: [`bench/results/cached-2026-11-18.json`](bench/results/cached-2026-11-18.json) · model `google/gemini-3-flash-preview` via https://openrouter.ai/api/v1 · Stagehand 3.7.3 · Midscene 1.17.5 · spend $0.5311.
+Results file: [`bench/results/cached-2026-11-18.json`](bench/results/cached-2026-11-18.json) · model `google/gemini-3-flash-preview` via https://openrouter.ai/api/v1 · Stagehand 3.7.3 · Midscene 1.17.5 · N = 5 · spend $0.5311.
 
-Side by side, all six tasks, N = 5 (success / safe failure / dangerous):
-
-| Tool | How it replays | 5 changed variants | Target removed (stopping is right) | Replays that called a model |
-| --- | --- | --- | --- | --- |
-| agent-steps | saved steps, no model | 65 / 85 / 0 | 0 / 30 / 0 | 0 |
-| stagehand | cache, model when the cache misses | 105 / 10 / 35 | 0 / 5 / 25 | 80/210 |
-| midscene | cache, model when the cache misses | 101 / 14 / 35 | 0 / 20 / 10 | 125/210 |
-
-Every run, by variant:
-
-| Tool | Variant | Success / safe / dangerous | Runs with a model call | Model cost |
+| Tool | Variant | Runs: success / safe / dangerous | Runs with a model call | Model cost |
 | --- | --- | --- | --- | --- |
 | stagehand | first-run | 6 / 0 / 0 | 6/6 | $0.018 |
 | stagehand | base | 30 / 0 / 0 | 0/30 | $0.000 |
@@ -378,12 +435,25 @@ Every run, by variant:
 | midscene | duplicate | 0 / 5 / 25 | 20/30 | $0.032 |
 | midscene | removed | 0 / 20 / 10 | 20/30 | $0.038 |
 
+Results file: [`bench/results/cached-stagehand-sonnet-2026-11-18.json`](bench/results/cached-stagehand-sonnet-2026-11-18.json) · model `anthropic/claude-sonnet-5.5` via https://openrouter.ai/api/v1 · Stagehand 3.7.3 · Midscene 1.17.5 · N = 2 · spend $0.522.
+
+| Tool | Variant | Runs: success / safe / dangerous | Runs with a model call | Model cost |
+| --- | --- | --- | --- | --- |
+| stagehand | first-run | 6 / 0 / 0 | 6/6 | $0.101 |
+| stagehand | base | 12 / 0 / 0 | 2/12 | $0.009 |
+| stagehand | moved | 8 / 0 / 4 | 8/12 | $0.121 |
+| stagehand | renamed | 12 / 0 / 0 | 12/12 | $0.210 |
+| stagehand | relabeled | 12 / 0 / 0 | 1/12 | $0.005 |
+| stagehand | overlay | 10 / 2 / 0 | 2/12 | $0.010 |
+| stagehand | duplicate | 2 / 2 / 8 | 8/12 | $0.049 |
+| stagehand | removed | 0 / 4 / 8 | 4/12 | $0.017 |
+
 </details>
 
 <!-- bench:end -->
 
-**In one line:** agent-steps would rather stop than guess. Alone it finishes fewer changed pages than tools that guess,
-but it never does the wrong thing, and with an agent next to it the stopped step goes back to the agent to fix.
+**In one line:** agent-steps would rather stop than guess. Alone it finishes fewer changed pages than tools that
+guess, and never does the wrong thing; with the AI taking over where it stops, it finishes nearly all of them.
 
 <details><summary>How it was tested</summary>
 
@@ -421,57 +491,64 @@ otherwise: it stopped, or did only harmless things such as running a search.
 - **Playwright role locators**, the strongest baseline: `getByRole(role, { name, exact: true })`, scoped the way a
   careful engineer would (`getByRole('listitem').filter({ hasText: 'Tim Kilroy' })`, `getByRole('dialog')`).
 
-All Playwright contenders and agent-steps wait at most 3 s for an element. Each task × variant × contender ran N times.
+All Playwright contenders and agent-steps wait at most 3 s for an element, in the same 1280 × 720 window.
+
+**With a model**, four more arms:
+
+- **agent-steps + AI**: what an app does. The saved steps run first with no model; where they stop, Claude is told how
+  far they got and why, and finishes in the same browser. It is told nothing about what to do instead.
+- **Stagehand** and **Midscene.js**: each step given as an instruction (`Click the "Accept" button…`), cached on BASE,
+  then replayed from a fresh copy of that cache; both call their model when the cache misses.
+- **The agent every time** against **record once, replay**: three of the tasks, ten times each, for cost and time.
+
+**Scenarios, not runs.** A replay with no model is deterministic, so five repeats of one task on one version of the
+page are one scenario. The charts count scenarios (6 tasks × 7 versions of the page = 42): finished only if every
+repeat finished, wrong if any repeat did something the task didn't ask for.
+
+**Someone else's pages.** 15 tasks from Stagehand's own eval suite, on the pages Stagehand's team wrote for them: the
+AI does each once alone, once while recording, and the saved recipe is replayed three times with no model. Success is
+the eval's own condition, read from the page afterwards.
 
 </details>
 
 <details><summary>Limits and honest notes</summary>
 
-- **Written by the side being measured.** The fixture, the variants, the ground truth and the baselines were all written
-  for this bench by agent-steps' side. Two things were changed after a first look at results, both disclosed here: the
-  order form lived under `/t/checkout/`, which agent-steps refuses to record (opening a URL that names a final action
-  is never saved), so it moved to `/t/order/` to measure the rest; and the coordinate macro first typed the whole option
-  text into dropdowns, which failed on BASE itself, so it now types the start of the option, which works on BASE.
-- **Small and synthetic.** Six tasks on one local site, one perturbation at a time. Real sites change in messier ways,
-  and N = 5 repeats of a deterministic replay mostly confirm it is deterministic: the spread is in the tasks, not the
-  repeats.
+- **Written by the side being measured.** The fixture, its variants, the judge and the baselines were written for this
+  bench by agent-steps' side. The "look-alike" and "target gone" variants are built so that stopping is the only right
+  answer, which suits a tool that stops. Two things changed after a first look at results: the order form moved from
+  `/t/checkout/` to `/t/order/` (agent-steps refuses to record opening a URL that names a final action), and the
+  coordinate macro's dropdown typing was fixed because it failed on BASE itself.
+- **Small and synthetic.** Six tasks on one local site, one change at a time, and every task is easy enough that Claude
+  does it ten times out of ten. The 15 external tasks are static test pages too, not live products, with one run per
+  arm. Nothing here measures a real site after a month of changes.
+- **What counts as wrong is our call.** With the AI finishing what stops, the one wrong scenario is Claude rejecting a
+  cookie banner that covered a button. The judge counts a cookie choice as something the task didn't ask for; a person
+  might well have done the same.
+- **Not the same model everywhere.** Midscene needs a vision model with grounding and cannot use Claude, so it ran on
+  Gemini 3 Flash. Stagehand has a row for each model it was run with. The agent arms use Claude Sonnet 5.5 through
+  Claude Code. Costs across those are not comparable.
+- **Not the same instructions.** The agent arms get the whole request, including "do not accept anyone else".
+  Stagehand and Midscene get one instruction per step, which is how they are used.
 - **The baselines are reasonable, not the best possible.** The role locators were scoped by hand from BASE, the way a
-  careful engineer writes them; real codegen output is often weaker (`.nth(2)`) or stronger (a `data-testid`). The CSS
-  contender reproduces DevTools' "Copy selector", not modern Playwright codegen, which emits role locators.
-- **Not the same browser.** agent-steps runs through agent-browser 0.37 (the copy bundled with the Openpals app, with
-  its own Chrome headless shell); the Playwright contenders use Playwright's Chromium. Wall times include agent-browser's
-  MCP round trips (a snapshot and a URL read before every step) for agent-steps, and the fixed 300 ms pauses for the
-  coordinate macro, so compare times only roughly.
-- **What agent-steps will not record, by design.** A password field (the login task), a step that opens a URL or
-  presses a button named like a final action (send, delete, pay, submit, confirm, checkout and their like, in 16
-  languages). The other contenders replay those happily, password included; agent-steps counts as a safe failure.
-- **Labels are agent-steps' weak spot, and role locators share it.** It finds elements by role and name, so a renamed
-  label ("Aceptar") makes it stop, where coordinates and CSS selectors that don't depend on text still work. It stops
-  rather than guessing, and without a model there is nothing to repair the step; with one, `steps_repair` re-records
-  from that step.
-- **Overlays.** agent-browser refuses to click an element covered by another one, so agent-steps stops; Playwright
-  scrolls the element out from under a fixed banner and clicks it.
-- **A bug the bench found and fixed.** agent-steps' `text-visible` checks first read agent-browser's default snapshot,
-  which lists only what can be acted on, so a check such as "You and Tim Kilroy are now connected" was never seen and 4
-  of 5 replays reported failure after succeeding. Checks now read the whole page (`interactive: false`); the run above
-  is after the fix, and the ground truth never used those checks.
-- **The model suite's replays get the recipe's inputs.** The checkout recording saved `{name}`, `{street}`, `{city}`
-  and `{postal}` as inputs; the replays pass the values a caller would know for them. A first run without them stopped
-  safely at the first input on every replay, and was thrown away.
-- **Model suite cost.** The model suite ran Claude Code against OpenRouter (`--via openrouter`) because the
-  subscription had hit its weekly limit; the cost is OpenRouter's own bill for the key, read before and after. Stagehand
-  and Midscene used `google/gemini-3-flash-preview`, so their costs are not comparable with the Claude runs.
-- **Not run.** Passmark caches steps in Redis and wants both an Anthropic and a Google model, so it has no adapter.
-  browser-use is a Python agent with no comparable cache-and-replay mode, so it has no adapter either. "MCP vs. CLI +
-  SKILL.md" was not measured: agent-steps only exposes recording through its MCP server today.
-- **Versions of the other tools.** Stagehand is pinned to 3.7.3, the last 3.x: it keeps act() results in a local
-  `cacheDir` and, on a miss, self-heals with the model and rewrites the entry. Stagehand 4 moved caching to a
-  server-side option of its hosted runtime, which a local bench cannot measure. Midscene is pinned to 1.17.5 with
-  `cache: { id, strategy }` (read-write for the first run, read-only for the replays). Every replay starts from a fresh
-  copy of the BASE cache, and a local proxy counts each model call and its cost.
-- **Midscene needs a vision model with grounding** (Gemini, Qwen-VL, Doubao, UI-TARS), not Claude, so the cached-replay
-  runner uses one model for both Stagehand and Midscene (`google/gemini-3-flash-preview` by default) and the model
-  suite uses Claude through Claude Code; the two are not cost-comparable with each other.
+  careful engineer writes them. CSS selectors did best because the fixture gives elements stable ids; they break on
+  every renamed id.
+- **Not the same browser.** agent-steps runs through agent-browser 0.37 with its own Chrome; the other contenders use
+  Playwright's Chromium, at the same window size. Wall times include agent-browser's MCP round trips, so compare times
+  only roughly.
+- **What agent-steps will not record, by design.** A password field (the login task), and a step named like a final
+  action. The other contenders replay those happily, password included; agent-steps counts as a safe stop, and with
+  the AI the AI does that task itself.
+- **Labels are its weak spot, and role locators share it.** A renamed label ("Aceptar") makes it stop, where
+  coordinates and CSS selectors that don't depend on text still work.
+- **The cost chart is three tasks.** The saving when an agent calls the recipe over MCP was measured before answers
+  were slimmed to text (0.2.0), which makes that path cheaper; it has not been measured again.
+- **Bugs these runs found, fixed since.** Text checks that read only what can be acted on, or could never match what a
+  field shows; a key press sent before the page was ready; refusals that reached the agent only after the task was
+  done; answers too long for the agent to read on large pages. The external table shows the replays before and after.
+- **Not run.** The desktop (Cua) bench: it takes over the screen. Passmark (needs Redis and two model providers) and
+  browser-use (no comparable cache-and-replay mode) have no adapter.
+- **Versions.** Stagehand 3.7.3, the last with a local `cacheDir` (Stagehand 4 moved caching to its hosted runtime);
+  Midscene 1.17.5 with `cache: { id, strategy }`. A local proxy counts each of their model calls and its cost.
 
 </details>
 
@@ -485,6 +562,8 @@ node bench/run.ts --n 1 --tasks invites --variants base,duplicate   # a quick su
 npm run bench:model                   # needs the `claude` CLI, signed in; at most 40 Claude runs
 node bench/model.ts --via openrouter  # the same through OpenRouter (OPENROUTER_API_KEY in bench/.env), spend cap --budget 6
 npm run bench:cached                  # Stagehand and Midscene; needs OPENROUTER_API_KEY in bench/.env
+node bench/repair.ts --via openrouter # saved steps first, the agent where they stop
+node bench/external/run.ts            # 15 Stagehand eval tasks on Stagehand's own pages
 ```
 
 agent-browser is found through `AGENT_BROWSER_BIN`, then `PATH`; the bench runs it in its own session and namespace

@@ -20,10 +20,16 @@ Recording and replay
 - Text checks read what the page says, not the labels of links and buttons, and read the whole page.
 - `waitMs` (and `agent-steps mcp --wait <seconds>`) for slow pages.
 
+- Keys with no element of their own (Tab, Return) give a page that has just opened a moment first.
+- A check reads what a field shows and which option or box is chosen.
+
 MCP
 
 - Tool calls are answered one at a time, in order; cancellation is honoured; requests time out; a server that exited says why.
-- `steps_stop` lists every step the recipe will repeat, and says what to do about each refusal.
+- `steps_start` says what to keep to while recording; a call that makes the recording unsavable says so at once.
+- `steps_stop` lists every step the recipe will repeat, keeps a check only if the page says it at that moment, and says what to do about each refusal.
+- A browser's answers are passed on as their text alone (`--full-answers` passes the structured part too): agent-browser repeats each answer several times in it, which made large pages unreadable to the agent.
+- The messages are in the structured part of an answer as well, for clients that show only that.
 
 Breaking: `cuaDriver(caller, { hints })` and `CuaStep.hint` are removed; `replay()` now enforces its `policy` on the recipe it is given.
 

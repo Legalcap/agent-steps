@@ -265,7 +265,8 @@ for (const { data } of cachedFiles) {
     if (replays.length) cachedRows.set(`${tool}/${data.meta.model}`, rowOf(`${tool[0]!.toUpperCase()}${tool.slice(1)} + ${modelName(data.meta.model)}`, replays));
   }
 }
-rows.push(...cachedRows.values());
+// One tool's rows together, in the order the tools were first measured.
+rows.push(...[...cachedRows].toSorted(([a], [b]) => Number(b.startsWith("stagehand/")) - Number(a.startsWith("stagehand/")) || a.localeCompare(b)).map(([, row]) => row));
 const shown = rows.filter((row) => row.scenarios.size > 0);
 const scenariosEach = Math.max(...shown.map((row) => row.scenarios.size));
 const changedEach = Math.max(...shown.map((row) => tally(row, changed).total));
