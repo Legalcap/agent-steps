@@ -181,19 +181,45 @@ function repairSection(result: { file: string; data: { meta: Record<string, unkn
   return lines.join("\n");
 }
 
-interface ExternalRecord { task: string; arm: "A" | "B-record" | "B-replay"; outcome: "success" | "failed" | "refused"; reason: string; ms: number; estCostUsd: number | null }
-function externalSection(result: { file: string; data: { meta: Record<string, unknown>; tasks: Array<{ id: string; title: string }>; records: ExternalRecord[] } }): string {
-  const { meta, tasks, records } = result.data;
-  const arm = (name: ExternalRecord["arm"]) => records.filter((record) => record.arm === name);
-  const recorded = arm("B-record");
-  const saved = recorded.filter((record) => record.outcome === "success");
-  const refused = recorded.filter((record) => record.outcome === "refused");
-  const reasons = new Map<string, number>();
-  for (const record of refused) reasons.set(record.reason, (reasons.get(record.reason) ?? 0) + 1);
-  const replays = arm("B-replay");
-  const done = replays.filter((record) => record.outcome === "success");
-  const lines: string[] = [];
-  lines.push(`**On pages we did not write** (${tasks.length} tasks from ${meta.source}, ${modelName(meta.model)}): the AI did ${arm("A").filter((record) => record.outcome === "success").length} of ${arm("A").length} on its own. agent-steps saved a recipe for ${saved.length} of ${recorded.length}${refused.length ? ` and refused ${refused.length} (${[...reasons].map(([reason, n]) => `${reason}: ${n}`).join(", ")})` : ""}; ${done.length} of ${replays.length} replays of the saved ones finished the task with no AI. Results: [\`bench/results/${result.file}\`](bench/results/${result.file}).`);
+interface ExternalRecord { task: string; arm: "A" | "B-record" | "B-replay" | "B-replay-before"; outcome: "success" | "failed" | "refused"; reason: string; ms: number; estCostUsd: number | null; note: string }
+interface ExternalResult {
+  file: string;
+  data: { meta: Record<string, unknown>; tasks: Array<{ id: string; title: string; source: string }>; recordings: Record<string, { saved: boolean; refusals: string[] }>; records: ExternalRecord[] };
+}
+const externalArm = (result: ExternalResult, name: ExternalRecord["arm"], task?: string) => result.data.records.filter((record) => record.arm === name && (task === undefined || record.task === task));
+const finished = (records: ExternalRecord[]) => records.filter((record) => record.outcome === "success").length;
+
+/** The lines under the charts: someone else's pages, in a sentence or two. */
+function externalSection(result: ExternalResult): string {
+  const { meta, tasks, recordings } = result.data;
+  const saved = tasks.filter((task) => recordings[task.id]?.saved);
+  const firstTry = saved.filter((task) => recordings[task.id]!.refusals.length === 0);
+  const now = externalArm(result, "B-replay");
+  const before = externalArm(result, "B-replay-before");
+  const saidFailed = before.filter((record) => !record.note.includes("said: done")).length;
+  const lines = [
+    `**On pages we did not write** (${tasks.length} tasks from Stagehand's own eval suite, ${modelName(meta.model)}): the AI did ${finished(externalArm(result, "A"))} of ${externalArm(result, "A").length} on its own. agent-steps saved a recipe for ${saved.length} (${firstTry.length} at the first try, the rest after the AI recorded again) and for ${tasks.length - saved.length} never. ${finished(now)} of ${now.length} replays of the saved ones finished the task with no AI.`,
+  ];
+  if (before.length) lines.push(`That run found bugs, fixed since: before the fixes ${finished(before)} of ${before.length} replays finished, and agent-steps reported ${saidFailed} failures where ${before.length - finished(before)} were real.`);
+  return lines.join(" ");
+}
+
+/** Every external task, for the folded part. */
+function externalTable(result: ExternalResult): string {
+  const { meta, tasks, recordings } = result.data;
+  const lines = [
+    `Results file: [\`bench/results/${result.file}\`](bench/results/${result.file}) · ${meta.source} · pages served from ${meta.sites} · \`${meta.model}\` · one run per arm per task, three replays · spend $${Number(meta.openRouterSpendUsd).toFixed(2)}.`,
+    "",
+    "| Task (Stagehand eval) | AI alone | Recording | Replays, no AI: before the fixes | Replays, no AI: now |",
+    "| --- | --- | --- | --- | --- |",
+  ];
+  for (const task of tasks) {
+    const recording = recordings[task.id];
+    const refused = recording?.refusals.length ? ` after ${recording.refusals.join(", ")}` : "";
+    const replays = (name: "B-replay" | "B-replay-before") => { const runs = externalArm(result, name, task.id); return runs.length ? `${finished(runs)}/${runs.length}` : "-"; };
+    lines.push(`| ${task.id} | ${finished(externalArm(result, "A", task.id)) ? "done" : "failed"} | ${recording?.saved ? `saved${refused}` : `refused (${recording?.refusals.join(", ") || "no recipe"})`} | ${replays("B-replay-before")} | ${replays("B-replay")} |`);
+  }
+  lines.push("");
   return lines.join("\n");
 }
 
@@ -306,6 +332,7 @@ const generated = [
   "#### With a model: the agent every time vs. agent-steps",
   "",
   model ? modelSection(model) : "**Not run yet.** `npm run bench:model` needs the `claude` CLI, signed in.\n",
+  ...(external ? ["#### On pages we did not write: Stagehand's eval sites", "", externalTable(external)] : []),
   "#### Other \"cache, then replay\" tools: Stagehand and Midscene.js",
   "",
   cachedFiles.length ? cachedFiles.map((file) => cachedSection(file)).join("\n") : cachedSection(null),
