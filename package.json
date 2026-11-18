@@ -45,6 +45,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/declaration-imports.mjs dist",
     "typecheck": "tsc -p tsconfig.json",
+    "lint": "oxlint --deny-warnings src bench --ignore-pattern \"bench/node_modules/**\"",
     "test": "vitest run",
     "bench:install": "npm install --prefix bench && cd bench && npx playwright install chromium-headless-shell",
     "bench": "node bench/run.ts && node bench/render.ts",
@@ -58,6 +59,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "oxlint": "^1.94.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11"
   }

@@ -26,8 +26,8 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-async function server(links = "Billing,Help") {
-  const client = new StdioMcpClient(process.execPath, [FAKE], { ...process.env, FAKE_LINKS: links, FAKE_LOG: log });
+async function server(links = "Billing,Help", slowOpenMs?: number) {
+  const client = new StdioMcpClient(process.execPath, [FAKE], { ...process.env, FAKE_LINKS: links, FAKE_LOG: log, ...(slowOpenMs ? { FAKE_SLOW_OPEN_MS: String(slowOpenMs) } : {}) });
   clients.push(client);
   await client.start();
   const store = new FileStore({ folder: join(dir, "recipes"), policy: "standard", now: () => 7 });
@@ -70,7 +70,7 @@ describe("the steps MCP server", () => {
     await call("agent_browser_fill", { selector: "@e10", text: "cats" });
     await call("agent_browser_click", { selector: "@e11" });
     const stopped = await call("steps_stop", { checks: ["Signed in"] });
-    expect(stopped.content[0]!.text).toBe('Saved "Find {animal} billing": 3 steps, revision 1.');
+    expect(stopped.content[0]!.text).toBe('Saved "Find {animal} billing", revision 1. steps_run repeats these steps without asking: 1. open https://example.com/; 2. fill "Search" searchbox; 3. click "Billing" link.');
     expect(store.list()).toHaveLength(1);
     expect((await call("steps_list")).structuredContent).toEqual({ recipes: [{ name: "Find {animal} billing", id: "rec-1", revision: 1, steps: 3, inputs: ["animal"], checks: ["Signed in"] }] });
 
@@ -95,7 +95,7 @@ describe("the steps MCP server", () => {
     await call("steps_repair", { name: "Open billing", at: 1 });
     const page = await call("agent_browser_snapshot");
     await call("agent_browser_click", { selector: `@${/link "Invoices" \[ref=(e\d+)\]/u.exec(page.content[0]!.text)![1]}` });
-    expect((await call("steps_stop")).content[0]!.text).toBe('Saved "Open billing": 1 steps, revision 2.');
+    expect((await call("steps_stop")).content[0]!.text).toBe('Saved "Open billing", revision 2. steps_run repeats these steps without asking: 1. click "Invoices" link.');
     expect(store.list()[0]).toMatchObject({ id: "rec-1", revision: 2, steps: [{ target: { role: "link", name: "Invoices" } }] });
     expect((await call("steps_run", { name: "Open billing" })).structuredContent).toEqual({ outcome: "done", steps: 1 });
   });
@@ -105,9 +105,37 @@ describe("the steps MCP server", () => {
     await call("steps_start", { name: "Close my account" });
     await call("agent_browser_snapshot");
     await call("agent_browser_click", { selector: "@e11" });
-    expect(await call("steps_stop")).toMatchObject({ isError: true, structuredContent: { saved: false, reason: "final-action" } });
+    const refused = await call("steps_stop");
+    expect(refused).toMatchObject({ isError: true, structuredContent: { saved: false, reason: "final-action" } });
+    expect(refused.content[0]!.text).toMatch(/^Not saved \(final-action\)\. A step pressed something that cannot be undone/u);
     expect(await call("steps_run", { name: "Close my account" })).toMatchObject({ isError: true });
     expect(actions()).toEqual(["agent_browser_click"]);
+  });
+
+  it("answers tool calls one at a time, in the order they came", async () => {
+    const { call } = await server("Billing,Help", 150);
+    await call("agent_browser_snapshot");
+    await Promise.all([call("agent_browser_open", { url: "https://example.com/" }), call("agent_browser_click", { selector: "@e11" })]);
+    expect(actions()).toEqual(["agent_browser_open", "agent_browser_click"]);
+  });
+
+  it("stops a call that was cancelled, and the ones after it still run", async () => {
+    const { steps, call } = await server("Billing,Help", 5_000);
+    const opening = steps.handle({ jsonrpc: "2.0", id: "slow", method: "tools/call", params: { name: "agent_browser_open", arguments: { url: "https://example.com/" } } });
+    await steps.handle({ jsonrpc: "2.0", method: "notifications/cancelled", params: { requestId: "slow" } });
+    expect(await opening).toMatchObject({ id: "slow", error: { message: "stopped" } });
+    expect((await call("agent_browser_snapshot")).content[0]!.text).toContain("Billing");
+  });
+
+  it("gives up on a server that does not answer, and says why one that exited did", async () => {
+    const slow = new StdioMcpClient(process.execPath, [FAKE], { ...process.env, FAKE_SLOW_OPEN_MS: "5000" }, { timeoutMs: 800 });
+    clients.push(slow);
+    await slow.start();
+    expect(await slow.call("agent_browser_open", { url: "https://example.com/" }, new AbortController().signal)).toEqual({ ok: false, error: "tools/call timed out after 800 ms" });
+    const dead = new StdioMcpClient(process.execPath, ["-e", "console.error('no browser here'); process.exit(3)"]);
+    clients.push(dead);
+    await expect(dead.start()).rejects.toThrow(/exited: no browser here/u);
+    expect(await dead.call("agent_browser_open", {}, new AbortController().signal)).toMatchObject({ ok: false, error: expect.stringContaining("exited") });
   });
 
   it("answers one recording at a time", async () => {

@@ -1,5 +1,6 @@
 // A stand-in for agent-browser's MCP server: a page with a search box and links, refs renumbered on every snapshot.
-// FAKE_LINKS names the links (comma separated); FAKE_LOG, when set, gets one line per action.
+// FAKE_LINKS names the links (comma separated); FAKE_LOG, when set, gets one line per action; FAKE_SLOW_OPEN_MS makes
+// opening a page take that long.
 import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
@@ -22,6 +23,10 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     return send({ jsonrpc: "2.0", id, result: text(lines.join("\n")) });
   }
   if (name === "agent_browser_get_url") return send({ jsonrpc: "2.0", id, result: text("https://example.com/") });
-  if (process.env.FAKE_LOG) appendFileSync(process.env.FAKE_LOG, `${name} ${JSON.stringify(args)}\n`);
-  return send({ jsonrpc: "2.0", id, result: text("Done") });
+  const done = () => {
+    if (process.env.FAKE_LOG) appendFileSync(process.env.FAKE_LOG, `${name} ${JSON.stringify(args)}\n`);
+    send({ jsonrpc: "2.0", id, result: text("Done") });
+  };
+  if (name === "agent_browser_open" && process.env.FAKE_SLOW_OPEN_MS) return void setTimeout(done, Number(process.env.FAKE_SLOW_OPEN_MS));
+  return done();
 });

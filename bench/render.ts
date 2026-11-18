@@ -138,7 +138,7 @@ function cachedSection(result: { file: string; data: { meta: Record<string, unkn
   lines.push("| --- | --- | --- | --- | --- |");
   const mine = noModelRuns.filter((run) => run.contender === "agent-steps");
   lines.push(`| agent-steps | saved steps, no model | ${trio(mine.filter((run) => PERTURBED.includes(run.variant)))} | ${trio(mine.filter((run) => run.variant === "removed"))} | 0 |`);
-  for (const tool of [...new Set(records.map((record) => record.tool))]) {
+  for (const tool of new Set(records.map((record) => record.tool))) {
     const replays = records.filter((record) => record.tool === tool && record.variant !== "first-run");
     lines.push(`| ${tool} | cache, model when the cache misses | ${trio(replays.filter((record) => PERTURBED.includes(record.variant)) as never)} | ${trio(replays.filter((record) => record.variant === "removed") as never)} | ${replays.filter((record) => record.llmCalls > 0).length}/${replays.length} |`);
   }
@@ -147,7 +147,7 @@ function cachedSection(result: { file: string; data: { meta: Record<string, unkn
   lines.push("");
   lines.push("| Tool | Variant | Success / safe / dangerous | Runs with a model call | Model cost |");
   lines.push("| --- | --- | --- | --- | --- |");
-  for (const tool of [...new Set(records.map((record) => record.tool))]) {
+  for (const tool of new Set(records.map((record) => record.tool))) {
     for (const variant of ["first-run", ...VARIANTS]) {
       const items = records.filter((record) => record.tool === tool && record.variant === variant);
       if (!items.length) continue;

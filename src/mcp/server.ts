@@ -1,12 +1,14 @@
 // An MCP server that sits in front of a driver's own MCP server (agent-browser, cua-driver): it passes every tool through
 // and adds steps_start, steps_stop, steps_list, steps_run and steps_repair. While a recording is on, every passed-through
-// call is kept; steps_run repeats a recipe with no model in the loop.
+// call is kept; steps_run repeats a recipe with no model in the loop. Tool calls are answered one at a time, in the order
+// they came, so a recording holds them in the order the agent made them; a cancelled request stops what it was doing.
 import { requestKey } from "../key.ts";
 import { reviseRecipe, parseRecipe, stepLabel } from "../recipe.ts";
 import { createRecorder, recordedResult, type Recorder } from "../recorder.ts";
 import { replay } from "../replay.ts";
 import type { FileStore } from "../store.ts";
-import type { Driver, Patience, Recipe } from "../types.ts";
+import type { Driver, Patience, Recipe, Refusal } from "../types.ts";
+import { MCP_PROTOCOL, VERSION } from "../version.ts";
 import { callOutcome, type McpTool } from "./client.ts";
 
 export interface Upstream {
@@ -43,6 +45,33 @@ export const STEPS_TOOLS: McpTool[] = [
 ];
 const STEPS_NAMES = new Set(STEPS_TOOLS.map((tool) => tool.name));
 
+/** What the agent can do about a recording that was not saved. */
+export const REFUSAL_HELP: Record<Refusal, string> = {
+  "final-action": "A step pressed something that cannot be undone (send, delete, pay, submit and their like), or Return where that would. Those are never repeated without you: stop the recording before that step and do it yourself each time.",
+  "secret-field": "A step typed into a password-like field, or typed something that looks like a key. Sign in yourself before recording, and pass values like that as inputs so they are never stored.",
+  "toggle-element": "A step clicked a checkbox or switch, which flips it from whatever state it is in. Use check or uncheck so it sets a state.",
+  "ambiguous-element": "A step acted on an element that shares its role and name with another one and has no heading of its own above it.",
+  "unlabelled-element": "A step acted on an element with no name (an icon with no label).",
+  "unknown-target": "A step acted on something that was not in the snapshot read before it. Read a snapshot, then act on a ref from it (not a CSS selector).",
+  "stale-element": "A step acted on an element from an older read of the window. Read the window again before acting.",
+  "unknown-tool": "The recording used a tool that cannot be repeated (running JavaScript, tabs, find with an action). Do that part outside the recording.",
+  "typing-appends": "A step typed at the cursor, which adds to what the field holds. Use fill (or set_value) so the field ends up with exactly the text.",
+  "extra-arguments": "A step used an argument that cannot be repeated safely.",
+  "pixel-or-drag": "A step used a point on the screen or a drag. Act on elements instead.",
+  "no-steps": "Nothing was done between steps_start and steps_stop.",
+  "too-many-steps": "The recording is too long. Record a shorter part of the task.",
+  "partial-tree": "A window was only partly read before a step. Read it whole first.",
+  "key-without-window": "A key press did not say which window it goes to.",
+  "unreadable-field": "A step replaced a field's text without reading what it held first.",
+  "missing-input": "A {placeholder} has no input named for it.",
+  "moment-words": "The name points at a moment (this, latest, today), so it would not mean the same next time.",
+  "typed-text-not-in-request": "A step typed words that the name does not hold.",
+  "url-not-in-request": "A step opened a link that the name does not hold.",
+  "incomplete-journal": "Part of the recording is missing.",
+  "denied": "A step was refused while recording.",
+  "tool-error": "A call failed while recording.",
+};
+
 const say = (text: string, structured?: Record<string, unknown>, isError = false): ToolResult => ({
   content: [{ type: "text", text }], ...(structured ? { structuredContent: structured } : {}), ...(isError ? { isError: true } : {}),
 });
@@ -50,6 +79,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const stringMap = (value: unknown): Record<string, string> | undefined =>
   isRecord(value) && Object.values(value).every((item) => typeof item === "string") ? (value as Record<string, string>) : undefined;
 const summary = (recipe: Recipe) => ({ name: recipe.name, id: recipe.id, revision: recipe.revision, steps: recipe.steps.length, inputs: recipe.inputs, checks: recipe.checks.map((check) => check.text) });
+/** Every step in words, so whoever saved the recipe sees what a repeat will do without asking. */
+const stepList = (recipe: Recipe) => recipe.steps.map((step, index) => `${index + 1}. ${step.tool} ${stepLabel(step)}`).join("; ");
+const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export function createStepsServer(deps: { driver: Driver; upstream: Upstream; store: FileStore; now?: () => number; id?: () => string; patience?: Patience }) {
   const now = deps.now ?? Date.now;
@@ -76,7 +108,7 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
       if (args.discard === true) return say("Recording dropped.");
       const checks = Array.isArray(args.checks) ? args.checks.filter((check): check is string => typeof check === "string" && check.trim() !== "") : [];
       const built = current.recorder.stop({ name: current.repair?.recipe.name ?? current.name, ...(current.inputs ? { inputs: current.inputs } : {}), checks });
-      if (!built.ok) return say(`Not saved: ${built.reason}.`, { saved: false, reason: built.reason }, true);
+      if (!built.ok) return say(`Not saved (${built.reason}). ${REFUSAL_HELP[built.reason]}`, { saved: false, reason: built.reason }, true);
       let recipe = built.recipe;
       if (current.repair) {
         const { recipe: old, at } = current.repair;
@@ -84,8 +116,12 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
         recipe = reviseRecipe({ ...old, inputs: [...new Set([...old.inputs, ...recipe.inputs])] }, { steps, checks: checks.length ? recipe.checks : old.checks }, now());
         if (!parseRecipe(recipe, "standard")) return say("Not saved: the repaired recipe is not valid.", { saved: false }, true);
       }
-      deps.store.save(recipe);
-      return say(`Saved "${recipe.name}": ${recipe.steps.length} steps, revision ${recipe.revision}.`, { saved: true, recipe: summary(recipe) });
+      try {
+        deps.store.save(recipe);
+      } catch (error) {
+        return say(`Not saved: ${errorText(error)}.`, { saved: false }, true);
+      }
+      return say(`Saved "${recipe.name}", revision ${recipe.revision}. steps_run repeats these steps without asking: ${stepList(recipe)}.`, { saved: true, recipe: summary(recipe) });
     }
     const recipe = typeof args.name === "string" ? deps.store.find(requestKey(args.name)) : undefined;
     if (!recipe) return say(`No saved recipe named "${String(args.name ?? "")}". steps_list shows them.`, undefined, true);
@@ -109,26 +145,46 @@ export function createStepsServer(deps: { driver: Driver; upstream: Upstream; st
     return say(`Stopped (${outcome.kind}).`, { outcome: outcome.kind }, true);
   }
 
+  /** The tool calls being answered or waiting their turn, by request id, so a cancellation can stop one. */
+  const calls = new Map<RpcId, AbortController>();
+  let turn: Promise<unknown> = Promise.resolve();
+
+  async function toolCall(name: string, args: Record<string, unknown>, signal: AbortSignal): Promise<unknown> {
+    if (signal.aborted) throw new Error("stopped");
+    if (STEPS_NAMES.has(name)) return stepsCall(name, args, signal);
+    const result = await deps.upstream.callRaw(name, args, signal);
+    recording?.recorder.record({ tool: name, arguments: args, result: recordedResult(callOutcome(result), deps.driver.kind) });
+    return result;
+  }
+
   async function handle(frame: unknown): Promise<unknown> {
     if (!isRecord(frame) || typeof frame.method !== "string") return { jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid request." } };
-    if (!Object.hasOwn(frame, "id")) return undefined;
+    if (!Object.hasOwn(frame, "id")) {
+      if (frame.method === "notifications/cancelled" && isRecord(frame.params)) calls.get(frame.params.requestId as RpcId)?.abort();
+      return undefined;
+    }
     const id = (frame.id ?? null) as RpcId;
     const answer = (result: unknown) => ({ jsonrpc: "2.0", id, result });
     const fail = (message: string, code = -32603) => ({ jsonrpc: "2.0", id, error: { code, message } });
     try {
-      if (frame.method === "initialize") return answer({ protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "agent-steps", version: "0.1.0" } });
+      if (frame.method === "initialize") return answer({ protocolVersion: MCP_PROTOCOL, capabilities: { tools: {} }, serverInfo: { name: "agent-steps", version: VERSION } });
       if (frame.method === "ping") return answer({});
       if (frame.method === "tools/list") return answer({ tools: [...(await deps.upstream.tools()).filter((tool) => !STEPS_NAMES.has(tool.name)), ...STEPS_TOOLS] });
       if (frame.method !== "tools/call") return fail("Method not found.", -32601);
       const params = isRecord(frame.params) ? frame.params : {};
       const name = typeof params.name === "string" ? params.name : "";
       const args = isRecord(params.arguments) ? params.arguments : {};
-      if (STEPS_NAMES.has(name)) return answer(await stepsCall(name, args));
-      const result = await deps.upstream.callRaw(name, args);
-      recording?.recorder.record({ tool: name, arguments: args, result: recordedResult(callOutcome(result), deps.driver.kind) });
-      return answer(result);
+      const stopper = new AbortController();
+      calls.set(id, stopper);
+      const mine = turn.then(() => toolCall(name, args, stopper.signal));
+      turn = mine.catch(() => {});
+      try {
+        return answer(await mine);
+      } finally {
+        calls.delete(id);
+      }
     } catch (error) {
-      return fail(error instanceof Error ? error.message : String(error));
+      return fail(errorText(error));
     }
   }
 
