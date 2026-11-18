@@ -31,8 +31,15 @@ export function agentBrowserVersion(bin: string): string {
 
 export const BENCH_SESSION = { AGENT_BROWSER_SESSION: "agent-steps-bench", AGENT_BROWSER_NAMESPACE: "agent-steps-bench" };
 
+/** The window every contender gets: Playwright's contenders, Stagehand and Midscene use the same size. */
+export const VIEWPORT = { width: 1280, height: 720 };
+
+/** Starts agent-browser's MCP server in the bench's session, with its window the size the other contenders use (the
+ * size stays with the session, so an agent that joins it later through its own MCP server sees the same window). */
 export async function startAgentBrowser(bin: string): Promise<StdioMcpClient> {
-  const client = new StdioMcpClient(bin, ["mcp"], { ...process.env, ...BENCH_SESSION });
+  const client = new StdioMcpClient(bin, ["mcp", "--tools", "core,mobile"], { ...process.env, ...BENCH_SESSION });
   await client.start();
+  const sized = await client.call("agent_browser_set_viewport", VIEWPORT, new AbortController().signal);
+  if (!sized.ok) throw new Error(`agent-browser could not set its window size: ${sized.error}`);
   return client;
 }

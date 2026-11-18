@@ -26,9 +26,9 @@ function frame(title: string, subtitle: string, height: number, body: string[], 
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${height}" viewBox="0 0 ${W} ${height}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="13" role="img" aria-label="${esc(title)}">`,
     "<style>",
     ".surface{fill:#fcfcfb}.ink{fill:#0b0b0b}.ink2{fill:#52514e}.axis{stroke:#d9d8d3}.gap{stroke:#fcfcfb}",
-    ".on-neutral{fill:#0b0b0b}.good{fill:#0ca30c}.neutral{fill:#a3a29c}.critical{fill:#d03b3b}.s1{fill:#2a78d6}.s2{fill:#eb6834}",
+    ".on-neutral{fill:#0b0b0b}.good{fill:#0ca30c}.neutral{fill:#a3a29c}.critical{fill:#d03b3b}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}",
     extraStyle,
-    "@media (prefers-color-scheme: dark){.surface{fill:#1a1a19}.ink{fill:#f0efec}.ink2{fill:#c3c2b7}.axis{stroke:#3a3936}.gap{stroke:#1a1a19}.neutral{fill:#6f6e69}.on-neutral{fill:#f0efec}.s1{fill:#3987e5}.s2{fill:#d95926}}",
+    "@media (prefers-color-scheme: dark){.surface{fill:#1a1a19}.ink{fill:#f0efec}.ink2{fill:#c3c2b7}.axis{stroke:#3a3936}.gap{stroke:#1a1a19}.neutral{fill:#6f6e69}.on-neutral{fill:#f0efec}.s1{fill:#3987e5}.s2{fill:#d95926}.s3{fill:#199e70}}",
     "</style>",
     `<rect class="surface" width="100%" height="100%" rx="8"/>`,
     `<text class="ink" x="20" y="30" font-size="16" font-weight="600">${esc(title)}</text>`,
@@ -39,8 +39,8 @@ function frame(title: string, subtitle: string, height: number, body: string[], 
   ].join("\n");
 }
 
-function legend(items: Array<[cls: string, label: string]>, y: number): string[] {
-  let x = LEFT;
+function legend(items: Array<[cls: string, label: string]>, y: number, from = LEFT): string[] {
+  let x = from;
   return items.flatMap(([cls, label]) => {
     const parts = [`<rect class="${cls}" x="${x}" y="${y - 10}" width="12" height="12" rx="2"/>`, `<text class="ink2" x="${x + 18}" y="${y}">${esc(label)}</text>`];
     x += 30 + label.length * 7;
@@ -85,20 +85,20 @@ export function outcomeBars(title: string, subtitle: string, rows: Array<{ label
   return frame(title, subtitle, top + rows.length * ROW + 10, body);
 }
 
-/** Two bars per group (series 1 and 2), values printed at the bars' ends with `format`. */
-export function pairedBars(title: string, subtitle: string, names: [string, string], groups: Array<{ label: string; values: [number, number] }>, format: (value: number) => string): string {
+/** One bar per series in each group (up to three series), values printed at the bars' ends with `format`. */
+export function groupedBars(title: string, subtitle: string, names: string[], groups: Array<{ label: string; values: number[] }>, format: (value: number) => string): string {
   const top = 92;
-  const pair = 2 * 18 + 4;
-  const groupH = pair + 18;
+  const each = 18;
+  const groupH = names.length * (each + 4) + 14;
   const max = Math.max(...groups.flatMap((group) => group.values));
-  const body = legend([["s1", names[0]], ["s2", names[1]]], 76);
+  const body = legend(names.map((name, index) => [`s${index + 1}`, name]), 76, 20);
   groups.forEach((group, index) => {
     const y = top + index * groupH;
-    body.push(`<text class="ink" x="${LEFT - 12}" y="${y + 24}" text-anchor="end">${esc(group.label)}</text>`);
+    body.push(`<text class="ink" x="${LEFT - 12}" y="${y + (names.length * (each + 4)) / 2 + 2}" text-anchor="end">${esc(group.label)}</text>`);
     group.values.forEach((value, series) => {
-      const w = (value / max) * PLOT;
-      const by = y + series * 22;
-      body.push(bar(LEFT, by, w, 18, series ? "s2" : "s1"));
+      const w = max ? (value / max) * PLOT : 0;
+      const by = y + series * (each + 4);
+      body.push(bar(LEFT, by, w, each, `s${series + 1}`));
       body.push(`<text class="ink" x="${LEFT + w + 8}" y="${by + 13}" font-weight="600">${esc(format(value))}</text>`);
     });
   });
