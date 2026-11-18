@@ -9,7 +9,7 @@ import { parseArgs } from "node:util";
 import { AgentStepsBench, describeOutcome, type AgentStepsRecording } from "./contenders/agent-steps.ts";
 import { startFixture } from "./fixture/server.ts";
 import { judge, TASKS, VARIANTS, type Outcome, type Task, type Variant } from "./fixture/site.ts";
-import { agentBrowserVersion, BENCH_SESSION, findAgentBrowser, startAgentBrowser } from "./lib/agent-browser.ts";
+import { agentBrowserVersion, BENCH_SESSION, findAgentBrowser, startAgentBrowser, VIEWPORT } from "./lib/agent-browser.ts";
 import { claudeRunner, estimateUsd, PRICES, tokensOf } from "./lib/claude.ts";
 import { benchMeta } from "./lib/meta.ts";
 
@@ -82,6 +82,8 @@ try {
       for (const variant of variants) {
         if (claude.spentUsd() >= budget) throw new Error(`budget reached ($${claude.spentUsd().toFixed(2)})`);
         fixture.reset(task.id, variant);
+        // The agent's own agent-browser may have relaunched the browser at another size; every scenario starts at ours.
+        await ab.call("agent_browser_set_viewport", VIEWPORT, new AbortController().signal);
         const recording = recipes.get(task.id)!;
         let stopped: string | null = recording.ok ? null : `there were none to run (${recording.reason})`;
         let stepsMs = 0;
