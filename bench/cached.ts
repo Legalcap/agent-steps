@@ -15,6 +15,8 @@ import { instructionFor, judge, TASKS, VARIANTS, type Intent, type Outcome, type
 import { startLlmProxy, type LlmUsage } from "./lib/llm-proxy.ts";
 import { benchMeta } from "./lib/meta.ts";
 
+// Read before anything runs, so the commit is the one that was measured.
+const startMeta = benchMeta();
 const { values } = parseArgs({
   options: {
     n: { type: "string", default: "5" },
@@ -258,7 +260,7 @@ const version = async (name: string) => {
 const result = {
   suite: "cached",
   meta: {
-    ...benchMeta(),
+    ...startMeta,
     model: values.model,
     modelFamily: values.family,
     endpoint: upstream.replace(/\/\/[^/]*@/u, "//"),

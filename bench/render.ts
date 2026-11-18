@@ -171,7 +171,7 @@ function chart(runs: Run[]): string {
   });
   const legendY = top + contenders.length * row + 18;
   [["success", "success"], ["safe", "safe failure (stopped)"], ["dangerous", "dangerous (wrong action)"]].forEach(([key, text], index) => {
-    const x = left + index * 160;
+    const x = 16 + index * 210;
     parts.push(`<rect x="${x}" y="${legendY - 11}" width="12" height="12" fill="${colors[key as Outcome]}"/><text x="${x + 18}" y="${legendY}" fill="#1b1f24">${text}</text>`);
   });
   parts.push("</svg>");

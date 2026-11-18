@@ -20,6 +20,8 @@ import { benchMeta } from "./lib/meta.ts";
  * 5-minute kind, at 1.25x the input price. */
 export const PRICES = { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.1 };
 
+// Read before anything runs, so the commit is the one that was measured.
+const startMeta = benchMeta();
 const { values } = parseArgs({
   options: {
     reps: { type: "string", default: "10" },
@@ -203,7 +205,7 @@ try {
 
 const result = {
   suite: "model",
-  meta: { ...benchMeta(), model: values.model, claudeCli: cliVersion, agentBrowser: agentBrowserVersion(abBin), reps, b2Reps, claudeRuns, prices: PRICES, aborted },
+  meta: { ...startMeta, model: values.model, claudeCli: cliVersion, agentBrowser: agentBrowserVersion(abBin), reps, b2Reps, claudeRuns, prices: PRICES, aborted },
   recordings: recordingNotes,
   records,
 };

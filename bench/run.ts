@@ -26,6 +26,8 @@ export interface RunRecord {
   error: string | null;
 }
 
+// Read before anything runs, so the commit is the one that was measured.
+const startMeta = benchMeta();
 const { values } = parseArgs({
   options: {
     n: { type: "string", default: "5" },
@@ -107,7 +109,7 @@ try {
 const result = {
   suite: "no-model",
   meta: {
-    ...benchMeta(),
+    ...startMeta,
     playwright: (await import("playwright/package.json", { with: { type: "json" } })).default.version,
     chromium: chromiumVersion,
     agentBrowser: abBin ? agentBrowserVersion(abBin) : null,
