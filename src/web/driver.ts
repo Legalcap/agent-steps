@@ -2,7 +2,7 @@
 // Caller the host gives it. Each targeted step reads a fresh snapshot and acts on the one element with its role and name.
 import type { Caller, CallOutcome, Driver, Resolved, WebStep } from "../types.ts";
 import { WEB_PREFIX, learnWeb, webLabel, webOwns, webRefusal, webWords } from "./rules.ts";
-import { matching, pageOf, readSnapshot } from "./snapshot.ts";
+import { matching, pageOf, readSnapshot, saidText } from "./snapshot.ts";
 
 export interface AgentBrowserDriverOptions {
   /** The tools' name prefix, `agent_browser_` by default. */
@@ -10,6 +10,9 @@ export interface AgentBrowserDriverOptions {
 }
 
 const textOf = (outcome: Extract<CallOutcome, { ok: true }>): string => outcome.text ?? "";
+/** agent-browser's refusal to act on an element another one covers at its click point. */
+const COVERED = /\bis covered by\b/iu;
+const UNCOVER_PX = 300;
 
 export function agentBrowserDriver(caller?: Caller, options: AgentBrowserDriverOptions = {}): Driver<WebStep> {
   const prefix = options.prefix ?? WEB_PREFIX;
@@ -32,22 +35,36 @@ export function agentBrowserDriver(caller?: Caller, options: AgentBrowserDriverO
       const { target } = step;
       if (!target) return { ok: true, tool, args: step.args };
       if (target.url) {
+        // A step recorded on one page never runs on another, so a page that cannot be read stops it too.
         const where = await live().call(`${prefix}get_url`, {}, signal);
-        const here = where.ok ? pageOf(textOf(where).trim()) : undefined;
-        if (here !== undefined && here !== target.url) return { ok: false, error: `the page is ${here}, not ${target.url}`, missing: true };
+        if (!where.ok) return where;
+        const here = pageOf(textOf(where).trim());
+        if (here !== target.url) return { ok: false, error: `the page is ${here ?? "unknown"}, not ${target.url}`, missing: true };
       }
       const seen = await snapshot(signal);
       if (!seen.ok) return seen;
       const found = matching(readSnapshot(textOf(seen)), target);
-      const named = `"${target.name}" (${target.role})`;
+      const named = `"${target.name}" (${target.role})${target.near ? ` under "${target.near}"` : ""}`;
       if (found.length === 0) return { ok: false, error: `no ${named} on the page`, missing: true };
       if (found.length > 1) return { ok: false, error: `more than one ${named} on the page` };
       return { ok: true, tool, args: { ...step.args, selector: `@${found[0]!.ref}` } };
     },
-    perform: (tool, args, signal) => live().call(tool, args, signal),
+    async perform(tool, args, signal) {
+      const done = await live().call(tool, args, signal);
+      if (done.ok || !COVERED.test(done.error) || typeof args.selector !== "string") return done;
+      // Something fixed to the window (a cookie banner, a sticky bar) sits over the element. Scrolling moves the element
+      // out from under it; nothing else is touched, and agent-browser still refuses a click that would land elsewhere.
+      for (const direction of ["down", "up"]) {
+        const scrolled = await live().call(`${prefix}scroll`, { direction, amount: direction === "down" ? UNCOVER_PX : 2 * UNCOVER_PX }, signal);
+        if (!scrolled.ok) return done;
+        const again = await live().call(tool, args, signal);
+        if (again.ok || !COVERED.test(again.error)) return again;
+      }
+      return done;
+    },
     async sees(check, signal) {
       const seen = await wholePage(signal);
-      return seen.ok ? { ok: true, seen: textOf(seen).includes(check.text) } : seen;
+      return seen.ok ? { ok: true, seen: saidText(textOf(seen)).includes(check.text) } : seen;
     },
   };
 }

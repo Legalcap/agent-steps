@@ -51,6 +51,7 @@ describe("FileStore", () => {
     expect(store.find("open notes")?.lastUsedAt).toBe(1_000 + UNUSED_MS - 1);
     clock += 2;
     expect(store.find("open notes")).toBeUndefined();
+    expect(readdirSync(dir)).toEqual([]);
   });
 
   it("forget answers whether it removed something", () => {

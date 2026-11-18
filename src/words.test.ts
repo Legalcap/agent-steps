@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { namesFinalAction, namesSecret } from "./words.ts";
+import { looksSecret, namesFinalAction, namesSearch, namesSecret } from "./words.ts";
 
 describe("screen words", () => {
   it.each<[string, string[]]>([
@@ -38,6 +38,25 @@ describe("screen words", () => {
     }
     for (const label of ["Username", "Email", "Search", "Pinned", "Shopping list", "Benutzername", "Имя пользователя", "Notes", ""]) {
       expect(namesSecret(label), label).toBe(false);
+    }
+  });
+
+  it("name the final actions of code, money and accounts too", () => {
+    for (const label of ["Merge pull request", "Deploy to production", "Terminate instance", "Revoke access", "Refund customer", "Cancel order", "Deactivate account",
+      "Sign out of all devices", "Log out", "Block user", "Cerrar sesión", "Reembolsar", "Abmelden", "Se déconnecter", "退款", "ログアウト"]) {
+      expect(namesFinalAction(label), label).toBe(true);
+    }
+    for (const label of ["Accept", "Continue", "Next", "Cancel", "Sign in", "Log in", "Reports", "Deployments", "Merged", "Blocked"]) expect(namesFinalAction(label), label).toBe(false);
+  });
+
+  it("know a search box, and text that looks like a key", () => {
+    for (const label of ["Search", "Search products", "Buscar", "Suche", "Rechercher", "搜索", "検索", "Filter"]) expect(namesSearch(label), label).toBe(true);
+    for (const label of ["Message", "Full name", "Comment", ""]) expect(namesSearch(label), label).toBe(false);
+    for (const text of ["sk-live-51Habcdefghijklmnop", "ghp_abcdefghijklmnopqrstuvwxyz0123", "AKIAIOSFODNN7EXAMPLE", "d41d8cd98f00b204e9800998ecf8427e", "aB3dE6gH9jK2mN5pQ8sT1vW4xY7z"]) {
+      expect(looksSecret(text), text).toBe(true);
+    }
+    for (const text of ["wireless headphones", "Calle Mayor 5", "ana.garcia@example.com", "https://example.com/a/very/long/path/Abc123Def456", "Sony WH-1000XM5", "{api_key}", "28013"]) {
+      expect(looksSecret(text), text).toBe(false);
     }
   });
 

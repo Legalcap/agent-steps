@@ -1,7 +1,7 @@
 // How a browser recording (agent-browser's tools) becomes steps, and what a browser step may never do. A step names the
 // element it acted on by role and name from the snapshot read before it, never by its ref or a CSS selector.
 import type { LearnContext, Learned, Policy, RecordedCall, Refusal, WebStep, WebTarget, WebTool } from "../types.ts";
-import { namesFinalAction, namesSecret } from "../words.ts";
+import { namesFinalAction, namesSearch, namesSecret } from "../words.ts";
 import { matching, pageOf, readSnapshot, refOf, type SnapshotNode } from "./snapshot.ts";
 
 export const WEB_PREFIX = "agent_browser_";
@@ -26,7 +26,14 @@ export const WEB_KEPT_ARGS: Record<WebTool, readonly string[]> = {
 const TARGETED: ReadonlySet<WebTool> = new Set<WebTool>(["click", "dblclick", "fill", "check", "uncheck", "select", "hover"]);
 const MAY_TARGET: ReadonlySet<WebTool> = new Set<WebTool>(["press", "scroll"]);
 const ACTIVATING: ReadonlySet<WebTool> = new Set<WebTool>(["click", "dblclick", "press"]);
-const OBSERVING = /^(snapshot|screenshot|read|get_\w+|is_\w+|wait\w*|find\w*|console|errors)$/u;
+/** agent-browser's tools that only look, by name: a tool that is not here and is not a step refuses the recording. */
+const OBSERVING: ReadonlySet<string> = new Set([
+  "snapshot", "screenshot", "read", "get_text", "get_html", "get_value", "get_url", "get_title", "get_attr", "get_count", "get_box", "get_styles",
+  "is_visible", "is_enabled", "is_checked", "wait_ms", "wait_for_selector", "wait_for_text", "wait_for_url", "wait_for_load", "tab_list", "tools_profiles",
+  "console", "errors",
+]);
+/** `find` only looks unless it is told to act on what it found. */
+const observes = (tool: string, args: Record<string, unknown>): boolean => OBSERVING.has(tool) || (tool === "find" && args.action === undefined);
 const TOGGLE_ROLE = /checkbox|switch|radio|menuitemcheckbox|menuitemradio/iu;
 const TEXT_ROLE = /textbox|searchbox|combobox|spinbutton/iu;
 const SECRET_NAME = /pass|pwd|otp|one.?time|2fa|mfa|security.?code|verif\w*.?code|cvc|cvv|card.?num|\bpin\b|ssn|secret|token/iu;
@@ -46,7 +53,11 @@ function keysOf(step: Pick<WebStep, "tool" | "args">): string[] {
 
 /** Security invariant: no saved browser step activates a final action (send, delete, pay and their like), toggles a
  * box from an unknown state, or types into a secret field. */
-export function unsafeWebStep(step: Pick<WebStep, "tool" | "args" | "target">, page: readonly SnapshotNode[] = []): Refusal | null {
+const searches = (field: Pick<WebTarget, "role" | "name"> | undefined): boolean =>
+  field !== undefined && (/searchbox/iu.test(field.role) || (TEXT_ROLE.test(field.role) && namesSearch(field.name)));
+
+/** `focused`: the field the keys go to when the step names none (the one the recording filled last). */
+export function unsafeWebStep(step: Pick<WebStep, "tool" | "args" | "target">, page: readonly SnapshotNode[] = [], focused?: Pick<WebTarget, "role" | "name">): Refusal | null {
   const { tool, target } = step;
   if (target) {
     if (TEXT_ROLE.test(target.role) && (namesSecret(target.name) || SECRET_NAME.test(target.name)) && (tool === "fill" || tool === "press")) return "secret-field";
@@ -57,7 +68,10 @@ export function unsafeWebStep(step: Pick<WebStep, "tool" | "args" | "target">, p
   }
   const keys = keysOf(step);
   if (keys.some((key) => DELETE_KEYS.has(key))) return "final-action";
-  if (keys.some((key) => RETURN_KEYS.has(key)) && (keys.some((key) => COMMAND_KEYS.has(key)) || page.some((node) => namesFinalAction(node.name)))) return "final-action";
+  // Return in a search box looks something up. Anywhere else it presses the page's default button, so it saves only
+  // on a page that shows no final action.
+  if (keys.some((key) => RETURN_KEYS.has(key))
+    && (keys.some((key) => COMMAND_KEYS.has(key)) || (!searches(target ?? focused) && page.some((node) => namesFinalAction(node.name))))) return "final-action";
   if (tool === "open" && typeof step.args.url === "string" && namesFinalAction(step.args.url)) return "final-action";
   return null;
 }
@@ -110,14 +124,24 @@ export function learnWeb(calls: readonly RecordedCall[], _context: LearnContext)
   const steps: Array<{ at: number; step: WebStep }> = [];
   let page: SnapshotNode[] = [];
   let url: string | undefined;
+  let focused: WebTarget | undefined;
   for (const [at, call] of calls.entries()) {
     const { arguments: args, result } = call;
     const tool = shortName(call.tool);
-    if (result.isError || result.rpcError) return refuse("tool-error");
+    // A call that failed did nothing a repeat should do again: an agent that mistypes a ref and tries again still
+    // leaves a recipe. Where the page is after it stays as it was known.
+    if (result.isError || result.rpcError) continue;
     const seen = readSnapshot(result.text ?? "");
-    if (OBSERVING.test(tool)) {
+    if (observes(tool, args)) {
       if (seen.length) page = seen;
       url = (tool === "get_url" ? urlIn(result.text) : undefined) ?? url;
+      continue;
+    }
+    // Closing the browser ends what was on screen; a repeat leaves the browser as it is.
+    if (tool === "close") {
+      page = [];
+      url = undefined;
+      focused = undefined;
       continue;
     }
     if (tool === "type") return refuse("typing-appends");
@@ -145,9 +169,11 @@ export function learnWeb(calls: readonly RecordedCall[], _context: LearnContext)
       step.target = target;
     } else if (TARGETED.has(tool)) return refuse("unknown-target");
     if (tool === "open" && pageOf(args.url) === undefined) return refuse("unknown-target");
-    const unsafe = unsafeWebStep(step, page);
+    const unsafe = unsafeWebStep(step, page, focused);
     if (unsafe) return refuse(unsafe);
     steps.push({ at, step });
+    if (tool === "fill") focused = step.target;
+    else if (tool !== "press" && tool !== "scroll" && tool !== "hover") focused = undefined;
     // An action may answer with the page it led to. A new page's refs are not the old one's; a click or a key may have
     // left the page, so where it is stays unknown until something says.
     const navigates = tool === "open" || tool === "back" || tool === "forward" || tool === "reload";

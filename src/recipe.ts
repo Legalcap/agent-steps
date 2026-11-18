@@ -4,6 +4,7 @@ import { cuaLabel, cuaRefusal, cuaWords, learnCua } from "./cua/rules.ts";
 import { exactRequest, hasMomentWords, inRequest, requestKey } from "./key.ts";
 import { RECIPE_VERSION, type Check, type Driver, type DriverKind, type Learned, type Policy, type Recipe, type RecordedCall, type Refusal, type Step } from "./types.ts";
 import { learnWeb, webLabel, webRefusal, webWords } from "./web/rules.ts";
+import { looksSecret } from "./words.ts";
 
 export const MAX_STEPS = 40;
 
@@ -79,6 +80,20 @@ export function fillInputs<S extends Step>(step: S, inputs: Readonly<Record<stri
   return { ...step, args: Object.fromEntries(Object.entries(step.args).map(([key, value]) => [key, fill(value, inputs)])) };
 }
 
+/** Security invariant: a recipe holds no key or token. What a step types that looks like one is refused; it belongs in
+ * an input, which is given at each run and never stored. */
+function typesSecret(steps: readonly Step[]): boolean {
+  return steps.some((step) => stepWords(step).typed.some((value) => typeof value === "string" && looksSecret(value)));
+}
+
+/** Security invariant: an input is the caller's words, filled in after the recipe was checked, so the step it makes is
+ * checked again: a value cannot turn a step into a final action, and cannot carry control characters. */
+export function filledRefusal(filled: Step, policy: Policy): Refusal | null {
+  const { typed, urls } = stepWords(filled);
+  if ([...typed, ...urls].some((value) => typeof value === "string" && CONTROL_CHARACTERS.test(value))) return "missing-input";
+  return stepRefusal(filled, policy);
+}
+
 /** Text a recording typed that is one of the inputs' values becomes that input's placeholder. */
 function parameterize(step: Step, inputs: Readonly<Record<string, string>>): Step {
   const entries = Object.entries(inputs).filter(([, value]) => value !== "").sort((a, b) => b[1].length - a[1].length);
@@ -125,6 +140,7 @@ export function learnRecipe(input: LearnInput): { ok: true; recipe: Recipe } | {
   const steps = placed.map(({ step }) => parameterize(step, input.inputs ?? {}));
   if (steps.length === 0) return refuse("no-steps");
   if (steps.length > MAX_STEPS) return refuse("too-many-steps");
+  if (typesSecret(steps)) return refuse("secret-field");
   const exact = exactRequest(request);
   if (policy === "strict") {
     const outside = wordsOutsideRequest(steps, exact);
@@ -156,7 +172,6 @@ const cuaStep = z.object({
   app: identity.optional(),
   window: windowTitle.optional(),
   element: z.object({ role: z.string(), label: z.string(), path: z.array(z.string()) }).strict().optional(),
-  hint: z.object({ x: z.number().finite(), y: z.number().finite() }).strict().optional(),
 }).strict();
 const webStep = z.object({
   driver: z.literal("agent-browser"),
@@ -190,12 +205,19 @@ export function recipeRefusal(recipe: Recipe, policy: Policy): Refusal | "malfor
     const refusal = stepRefusal(step, policy);
     if (refusal) return refusal;
   }
+  if (typesSecret(recipe.steps)) return "secret-field";
   for (const name of usedInputs(recipe.steps)) if (!recipe.inputs.includes(name)) return "missing-input";
   if (policy === "strict") {
     if (recipe.inputs.length) return "missing-input";
     if (holdsPersonWords(recipe.steps) && (recipe.request !== exactRequest(recipe.request) || !recipeFitsRequest(recipe, recipe.request))) return "typed-text-not-in-request";
   }
   return null;
+}
+
+/** Why something handed over as a recipe must not run: not a recipe at all, or one its policy refuses. Null when it may. */
+export function whyNotRecipe(raw: unknown, policy: Policy): Refusal | "malformed" | null {
+  const parsed = recipeSchema.safeParse(raw);
+  return parsed.success ? recipeRefusal(parsed.data as Recipe, policy) : "malformed";
 }
 
 /** A recipe parsed and checked, or null. */

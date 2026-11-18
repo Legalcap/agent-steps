@@ -75,7 +75,9 @@ describe("learning browser steps", () => {
     ["typed-text-not-in-request", [...OPENED, call("fill", { selector: "@e6", text: "dogs" })]],
     ["url-not-in-request", [call("open", { url: "https://example.com/account/42" })]],
     ["moment-words", OPENED, "search for this on example.com"],
-    ["tool-error", [{ ...call("click", { selector: "@e5" }), result: { isError: true } }]],
+    ["unknown-tool", [...OPENED, call("find", { locator: "role", value: "button", action: "click" })]],
+    ["unknown-tool", [...OPENED, call("tab_new", { url: "https://example.com/" })]],
+    ["no-steps", [{ ...call("click", { selector: "@e5" }), result: { isError: true } }]],
   ])("refuses: %s %#", (reason, calls, request) => expect(learn(calls, request)).toEqual({ ok: false, reason }));
 
   it("keeps a checkbox step that sets a state rather than flips one", () => {
@@ -85,6 +87,30 @@ describe("learning browser steps", () => {
   it("presses Enter only on a page that shows no final action", () => {
     const quiet = '- searchbox "Search" [ref=e1]\n- link "Help" [ref=e2]';
     expect(learn([call("open", { url: "https://example.com/" }), call("snapshot", {}, quiet), call("press", { key: "Enter" })]).ok).toBe(true);
+  });
+
+  it("presses Enter in a search box whatever else the page shows, and in no other field beside a final action", () => {
+    const busy = '- searchbox "Search" [ref=e1]\n- textbox "Buscar productos" [ref=e2]\n- textbox "Message" [ref=e3]\n- button "Share" [ref=e4]';
+    const after = (selector: string) => learn([call("open", { url: "https://example.com/" }), call("snapshot", {}, busy), call("fill", { selector, text: "cats" }), call("press", { key: "Enter" })]);
+    expect(after("@e1").ok).toBe(true);
+    expect(after("@e2").ok).toBe(true);
+    expect(after("@e3")).toEqual({ ok: false, reason: "final-action" });
+    expect(learn([call("open", { url: "https://example.com/" }), call("snapshot", {}, busy), call("press", { selector: "@e1", key: "Enter" })]).ok).toBe(true);
+  });
+
+  it("never saves typed text that looks like a key, unless it is an input", () => {
+    const key = "sk-live-51Habcdefghijklmnop";
+    const typing = [...OPENED, call("fill", { selector: "@e6", text: key })];
+    const standard = (inputs?: Record<string, string>) => learnRecipe({ calls: typing, drivers: [agentBrowserDriver()], request: "set the key", policy: "standard", id: "r1", now: 1, ...(inputs ? { inputs } : {}) });
+    expect(standard()).toEqual({ ok: false, reason: "secret-field" });
+    const asInput = standard({ key });
+    expect(asInput.ok && asInput.recipe.steps[1]!.args).toEqual({ text: "{key}" });
+  });
+
+  it("leaves out a call that failed, a look with find, and closing the browser", () => {
+    const failed = { ...call("click", { selector: "@e99" }), result: { isError: true } };
+    const out = learn([...OPENED, failed, call("find", { locator: "text", value: "Billing" }), call("click", { selector: "@e5" }), call("close")]);
+    expect(out.ok && out.recipe.steps.map((step) => step.tool)).toEqual(["open", "click"]);
   });
 });
 
@@ -125,6 +151,41 @@ describe("agentBrowserDriver", () => {
     const driver = agentBrowserDriver(caller(PAGE));
     expect(await driver.resolve(step({ role: "button", name: "Pay" }), signal)).toMatchObject({ ok: false, missing: true });
     expect(await driver.resolve(step({ role: "button", name: "Pay", frame: true }), signal)).toMatchObject({ ok: true, args: { selector: "@e13" } });
+  });
+
+  it("stops when it cannot read which page it is on", async () => {
+    const blind: Caller = { call: async (tool) => (tool === "agent_browser_get_url" ? { ok: false, error: "no page" } : { ok: true, structured: {}, text: PAGE }) };
+    expect(await agentBrowserDriver(blind).resolve(step({ role: "link", name: "Billing", near: "Account", url: "https://example.com/" }), signal)).toEqual({ ok: false, error: "no page" });
+  });
+
+  it("scrolls an element out from under what covers it, and gives up when that does not help", async () => {
+    const covering = (clears: number): Caller & { calls: string[] } => {
+      const calls: string[] = [];
+      let scrolls = 0;
+      return {
+        calls,
+        async call(tool, args): Promise<CallOutcome> {
+          calls.push(`${tool.replace("agent_browser_", "")}${args.direction ? `:${String(args.direction)}` : ""}`);
+          if (tool === "agent_browser_scroll") scrolls++;
+          if (tool === "agent_browser_click" && scrolls < clears) return { ok: false, error: "Element '@e5' is covered by <section.cookie> at its click point" };
+          return { ok: true, structured: {} };
+        },
+      };
+    };
+    const freed = covering(1);
+    expect(await agentBrowserDriver(freed).perform("agent_browser_click", { selector: "@e5" }, signal)).toEqual({ ok: true, structured: {} });
+    expect(freed.calls).toEqual(["click", "scroll:down", "click"]);
+    const stuck = covering(9);
+    expect(await agentBrowserDriver(stuck).perform("agent_browser_click", { selector: "@e5" }, signal)).toMatchObject({ ok: false });
+    expect(stuck.calls).toEqual(["click", "scroll:down", "click", "scroll:up", "click"]);
+  });
+
+  it("does not take a link's or a button's label for something the page says", async () => {
+    const page = '- link "Saved items" [ref=e1]\n- button "Send invoice" [ref=e2]\n- heading "Review your order" [level=1, ref=e3]\n- paragraph\n  - StaticText "Changes saved"';
+    const sees = (text: string) => agentBrowserDriver(caller(page, undefined, page)).sees({ kind: "text-visible", driver: "agent-browser", text }, signal);
+    expect(await sees("Saved items")).toEqual({ ok: true, seen: false });
+    expect(await sees("Review your order")).toEqual({ ok: true, seen: true });
+    expect(await sees("Changes saved")).toEqual({ ok: true, seen: true });
   });
 
   it("reads a check from the page's snapshot, plain text included", async () => {

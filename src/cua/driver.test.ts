@@ -13,13 +13,12 @@ const desktop = (label = "Save"): Caller => ({
     return { ok: true, structured: completeWindowState({ ...state, elements: state.elements!.map((element) => (element.label === "Save" ? { ...element, label } : element)) }, "Dear Ana") };
   },
 });
-const SAVE: CuaStep = { driver: "cua", tool: "click", args: {}, app: TEXTEDIT, window: { title: "Untitled" }, element: { role: "AXButton", label: "Save", path: [] }, hint: { x: 40, y: 12 } };
+const SAVE: CuaStep = { driver: "cua", tool: "click", args: {}, app: TEXTEDIT, window: { title: "Untitled" }, element: { role: "AXButton", label: "Save", path: [] } };
 
 describe("cuaDriver", () => {
-  it("clicks a recorded point only when asked to and the element is gone", async () => {
+  it("finds an element by what it is, and never falls back to a point on the screen", async () => {
+    expect(await cuaDriver(desktop()).resolve(SAVE, signal)).toEqual({ ok: true, tool: "click", args: { pid: 4242, window_id: 7, element_token: "s2-e3" } });
     expect(await cuaDriver(desktop("Keep")).resolve(SAVE, signal)).toMatchObject({ ok: false, missing: true });
-    expect(await cuaDriver(desktop("Keep"), { hints: true }).resolve(SAVE, signal)).toEqual({ ok: true, tool: "click", args: { pid: 4242, window_id: 7, x: 40, y: 12 } });
-    expect(await cuaDriver(desktop(), { hints: true }).resolve(SAVE, signal)).toEqual({ ok: true, tool: "click", args: { pid: 4242, window_id: 7, element_token: "s2-e3" } });
   });
 
   it("reads a check from the window's labels and values", async () => {

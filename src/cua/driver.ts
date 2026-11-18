@@ -4,11 +4,6 @@ import type { Caller, Check, CuaStep, Driver } from "../types.ts";
 import { resolveStep } from "./resolve.ts";
 import { cuaLabel, cuaOwns, cuaRefusal, cuaWords, learnCua } from "./rules.ts";
 
-export interface CuaDriverOptions {
-  /** When an element is gone, click the point it was recorded at. Off by default: a point is only a last resort. */
-  hints?: boolean;
-}
-
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** Every label and value the window shows. */
@@ -17,7 +12,7 @@ function windowText(state: Record<string, unknown>): string[] {
   return elements.flatMap((element) => (isRecord(element) ? [element.label, element.value].filter((text): text is string => typeof text === "string") : []));
 }
 
-export function cuaDriver(caller?: Caller, options: CuaDriverOptions = {}): Driver<CuaStep> {
+export function cuaDriver(caller?: Caller): Driver<CuaStep> {
   const live = (): Caller => {
     if (!caller) throw new Error("this cua driver was made without a caller, so it can only learn");
     return caller;
@@ -30,11 +25,7 @@ export function cuaDriver(caller?: Caller, options: CuaDriverOptions = {}): Driv
     words: cuaWords,
     label: cuaLabel,
     async resolve(step, signal) {
-      const found = await resolveStep(step, live(), signal);
-      if (found.ok || !found.missing || !options.hints || !step.hint || step.tool !== "click" || !step.element) return found;
-      const { element: _element, ...windowOnly } = step;
-      const place = await resolveStep(windowOnly, live(), signal);
-      return place.ok ? { ok: true, tool: step.tool, args: { ...place.args, x: step.hint.x, y: step.hint.y } } : found;
+      return resolveStep(step, live(), signal);
     },
     perform: (tool, args, signal) => live().call(tool, args, signal),
     async sees(check: Check, signal) {

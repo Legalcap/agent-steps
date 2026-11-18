@@ -1,5 +1,6 @@
 // A folder of recipes, one JSON file each. Every read checks the recipe again, so a file edited by hand into something
-// unsafe is skipped, and recipes unused for long or beyond the limit are dropped.
+// unsafe is skipped. A recipe unused for long, or beyond the limit, is deleted from the folder: what it typed does not
+// stay on disk after it stopped being used.
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -53,7 +54,9 @@ export class FileStore {
       const id = FILE.exec(name)?.[1];
       if (!id) continue;
       const recipe = this.readFile(id);
-      if (recipe && recipe.id === id && recipe.lastUsedAt >= cutoff) recipes.push(recipe);
+      if (!recipe || recipe.id !== id) continue;
+      if (recipe.lastUsedAt >= cutoff) recipes.push(recipe);
+      else this.remove(id);
     }
     return recipes.sort((a, b) => b.lastUsedAt - a.lastUsedAt);
   }

@@ -1,8 +1,8 @@
-// Runs a recipe with no model: each step is found again on the live screen by what it is, done, and the checks are read
-// at the end. A step that cannot be found or fails can be handed to `repair` once; what it returns takes the step's place
+// Runs a recipe with no model: the recipe is checked again first (it may have come from anywhere), then each step is
+// found again on the live screen by what it is, done, and the checks are read at the end. A step that cannot be found or fails can be handed to `repair` once; what it returns takes the step's place
 // and the recipe comes back one revision on.
 import { setTimeout as delay } from "node:timers/promises";
-import { fillInputs, reviseRecipe, stepLabel, stepRefusal } from "./recipe.ts";
+import { filledRefusal, fillInputs, reviseRecipe, stepLabel, stepRefusal, whyNotRecipe } from "./recipe.ts";
 import type { CallOutcome, Check, Driver, Patience, Policy, Recipe, Resolved, Step } from "./types.ts";
 
 export const RETRY_MS = 3_000;
@@ -35,6 +35,8 @@ export interface ReplayOptions {
   patience?: Patience;
   /** The policy the recipe must still meet (strict by default). */
   policy?: Policy;
+  /** How long to keep looking for a step's target or a check's text that is not there yet (3 s by default). */
+  waitMs?: number;
   /** Asked before each step, after its target was found; false stops the run. */
   approve?(step: Step, index: number, label: string): Promise<boolean>;
   onStep?(event: StepEvent): void;
@@ -53,8 +55,8 @@ const STOPPED: ReplayOutcome = { kind: "stopped" };
 const failure = (error: string): Extract<CallOutcome, { ok: false }> => ({ ok: false, error });
 
 /** Finds a step, looking again for a few seconds while it is only missing (a window still opening, a page loading). */
-export async function resolveSoon(driver: Driver, step: Step, signal: AbortSignal, patience: Patience = REAL_TIME): Promise<Resolved> {
-  const deadline = patience.now() + RETRY_MS;
+export async function resolveSoon(driver: Driver, step: Step, signal: AbortSignal, patience: Patience = REAL_TIME, waitMs = RETRY_MS): Promise<Resolved> {
+  const deadline = patience.now() + waitMs;
   for (;;) {
     const target = await driver.resolve(step as never, signal);
     if (target.ok || !target.missing || signal.aborted || patience.now() + POLL_MS > deadline) return target;
@@ -62,8 +64,8 @@ export async function resolveSoon(driver: Driver, step: Step, signal: AbortSigna
   }
 }
 
-async function seesSoon(driver: Driver, check: Check, signal: AbortSignal, patience: Patience): Promise<Extract<CallOutcome, { ok: false }> | null> {
-  const deadline = patience.now() + RETRY_MS;
+async function seesSoon(driver: Driver, check: Check, signal: AbortSignal, patience: Patience, waitMs: number): Promise<Extract<CallOutcome, { ok: false }> | null> {
+  const deadline = patience.now() + waitMs;
   for (;;) {
     const read = await driver.sees(check, signal);
     if (!read.ok) return read;
@@ -79,6 +81,10 @@ export async function replay(recipe: Recipe, options: ReplayOptions): Promise<Re
   const patience = options.patience ?? REAL_TIME;
   const policy = options.policy ?? "strict";
   const now = options.now ?? Date.now;
+  const waitMs = options.waitMs ?? RETRY_MS;
+  // Security invariant: nothing runs from a recipe that would not load. A caller may hand over one it built or edited.
+  const refusal = whyNotRecipe(recipe, policy);
+  if (refusal) return { kind: "failed", done: 0, total: Array.isArray(recipe.steps) ? recipe.steps.length : 0, index: 0, tool: "recipe", label: "the recipe", error: `this recipe must not run (${refusal})` };
   const steps = [...recipe.steps];
   let repaired = false;
   const driverFor = (kind: Step["driver"]) => drivers.find((driver) => driver.kind === kind);
@@ -98,7 +104,9 @@ export async function replay(recipe: Recipe, options: ReplayOptions): Promise<Re
       } catch (error) {
         return failed(failure(error instanceof Error ? error.message : String(error)));
       }
-      const target = await resolveSoon(driver, filled, signal, patience);
+      const unsafe = filledRefusal(filled, policy);
+      if (unsafe) return failed(failure(`with these inputs this step must not run (${unsafe})`));
+      const target = await resolveSoon(driver, filled, signal, patience, waitMs);
       if (!target.ok) return failed(target);
       if (options.approve && !(await options.approve(step, index, label))) return signal.aborted ? STOPPED : { kind: "declined", index, tool: step.tool, label };
       if (signal.aborted) return STOPPED;
@@ -121,7 +129,7 @@ export async function replay(recipe: Recipe, options: ReplayOptions): Promise<Re
   for (const check of recipe.checks) {
     if (signal.aborted) return STOPPED;
     const driver = driverFor(check.driver);
-    const missed = driver ? await seesSoon(driver, check, signal, patience) : failure(`no ${check.driver} driver to read this check`);
+    const missed = driver ? await seesSoon(driver, check, signal, patience, waitMs) : failure(`no ${check.driver} driver to read this check`);
     if (missed) {
       return signal.aborted ? STOPPED : { kind: "failed", done: steps.length, total: steps.length, index: steps.length, tool: "check", label: `"${check.text}"`, error: missed.error, check: true };
     }

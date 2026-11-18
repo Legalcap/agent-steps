@@ -5,15 +5,15 @@ export type {
 } from "./types.ts";
 export { RECIPE_VERSION } from "./types.ts";
 export { exactRequest, hasMomentWords, inRequest, requestKey } from "./key.ts";
-export { namesFinalAction, namesSecret } from "./words.ts";
+export { looksSecret, namesFinalAction, namesSearch, namesSecret } from "./words.ts";
 export {
-  MAX_STEPS, fillInputs, holdsPersonWords, learnRecipe, parseRecipe, recipeFitsRequest, recipeRefusal, recipeSchema, reviseRecipe, stepLabel,
-  stepRefusal, stepWords, usedInputs, type LearnInput,
+  MAX_STEPS, filledRefusal, fillInputs, holdsPersonWords, learnRecipe, parseRecipe, recipeFitsRequest, recipeRefusal, recipeSchema, reviseRecipe, stepLabel,
+  stepRefusal, stepWords, usedInputs, whyNotRecipe, type LearnInput,
 } from "./recipe.ts";
 export { createRecorder, recordedResult, type Recorder } from "./recorder.ts";
 export { POLL_MS, RETRY_MS, replay, resolveSoon, type RepairContext, type ReplayOptions, type ReplayOutcome, type StepEvent } from "./replay.ts";
 export { FileStore, MAX_RECIPES, UNUSED_MS, type FileStoreOptions } from "./store.ts";
-export { cuaDriver, type CuaDriverOptions } from "./cua/driver.ts";
+export { cuaDriver } from "./cua/driver.ts";
 export { cuaOwns } from "./cua/rules.ts";
 export { slimResponse, type CuaCall, type SlimResult, type SlimStructured, type WireElement } from "./cua/wire.ts";
 export { agentBrowserDriver, type AgentBrowserDriverOptions } from "./web/driver.ts";

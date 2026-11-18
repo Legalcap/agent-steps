@@ -42,6 +42,23 @@ export function readSnapshot(text: string): SnapshotNode[] {
   return nodes;
 }
 
+/** Roles a person acts on. What they are named is a control's label, not something the page says. */
+const CONTROL = /^(?:link|button|textbox|searchbox|combobox|listbox|option|checkbox|radio|switch|slider|spinbutton|menuitem\w*|tab|treeitem)$/iu;
+const TEXT_LINE = /^\s*- ([^\s"[\]:]+)(?: "((?:[^"\\]|\\.)*)")?[^:"]*(?:: ?(.*))?$/u;
+
+/** What a whole-page snapshot says, as one text: headings, paragraphs and status lines, without the labels of links,
+ * buttons and fields. A check for "Saved" is not met by a "Saved items" link. */
+export function saidText(text: string): string {
+  const said: string[] = [];
+  for (const line of text.split("\n")) {
+    const item = TEXT_LINE.exec(line);
+    if (!item || CONTROL.test(item[1]!)) continue;
+    if (item[2]) said.push(unquote(item[2]));
+    if (item[3]) said.push(item[3].trim());
+  }
+  return said.join("\n");
+}
+
 /** `@e12`, `e12`: a snapshot ref. Anything else (a CSS selector) is not one. */
 export function refOf(selector: unknown): string | undefined {
   return typeof selector === "string" ? /^@?(e\d+)$/u.exec(selector.trim())?.[1] : undefined;

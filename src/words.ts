@@ -3,66 +3,84 @@
  * matches only a label that is exactly that. Languages written without spaces match anywhere in the label. */
 export interface LanguageWords { words: readonly string[]; unspaced?: true }
 
-/** Security invariant: steps that press one of these (send, delete, buy, pay, post, submit, order, transfer, publish and
- * their like) are never saved, so that request always goes to the AI. */
+/** Steps that press one of these (send, delete, buy, pay, post, submit, order, transfer, publish, merge, deploy, refund,
+ * sign out and their like) are never saved, so that request always goes to the AI. It is a list of words, not a proof:
+ * a button named something else ("Accept", "Continue") is saved, and a host that needs more asks before each step
+ * (`approve`). */
 export const FINAL_ACTIONS: Readonly<Record<string, LanguageWords>> = {
   en: { words: ["send", "resend", "paperplane", "delete", "trash", "erase", "remove", "discard", "empty bin", "move to bin", "don't save", "do not save",
     "buy", "purchase", "checkout", "check out", "subscribe", "unsubscribe", "pay", "place order", "place your order", "order now", "book now", "reserve", "donate",
-    "post", "publish", "tweet", "share", "reply", "comment", "submit", "confirm", "transfer", "withdraw", "upload", "approve", "uninstall", "reset", "shut down", "restart"] },
+    "post", "publish", "tweet", "share", "reply", "comment", "submit", "confirm", "transfer", "withdraw", "upload", "approve", "uninstall", "reset", "shut down", "restart",
+    "merge", "deploy", "redeploy", "terminate", "revoke", "refund", "deactivate", "disable", "close account", "cancel order", "cancel subscription", "cancel booking", "cancel membership", "cancel plan", "sign out", "log out", "logout", "signout", "wipe", "force push", "block", "ban", "report abuse", "report spam", "report user", "rotate key", "drop table", "drop database", "clear history", "clear all", "clear data", "leave group", "leave team", "leave workspace", "place bid", "bid now", "vote", "apply now", "mark as paid"] },
   de: { words: ["senden", "absenden", "abschicken", "versenden", "löschen", "entfernen", "verwerfen", "papierkorb entleeren", "in den papierkorb", "nicht sichern",
     "nicht speichern", "kaufen", "kauf", "erwerben", "bestellen", "bestellung aufgeben", "zur kasse", "abonnieren", "abbestellen", "bezahlen", "zahlen", "buchen",
     "reservieren", "spenden", "posten", "veröffentlichen", "teilen", "antworten", "kommentieren", "einreichen", "übermitteln", "bestätigen", "überweisen",
-    "überweisung", "abheben", "hochladen", "genehmigen", "deinstallieren", "zurücksetzen", "ausschalten", "neu starten"] },
+    "überweisung", "abheben", "hochladen", "genehmigen", "deinstallieren", "zurücksetzen", "ausschalten", "neu starten",
+    "zusammenführen", "widerrufen", "erstatten", "rückerstattung", "deaktivieren", "stornieren", "abmelden", "ausloggen", "konto schließen", "blockieren", "sperren", "abstimmen"] },
   es: { words: ["enviar", "envía", "envia", "reenviar", "eliminar", "elimina", "borrar", "borra", "suprimir", "quitar", "descartar", "vaciar papelera",
     "vaciar la papelera", "trasladar a la papelera", "mover a la papelera", "no guardar", "comprar", "compra", "finalizar compra", "realizar pedido", "hacer pedido",
     "tramitar pedido", "pedir", "suscribirse", "suscribir", "cancelar suscripción", "darse de baja", "pagar", "paga", "reservar", "donar", "publicar", "publica",
     "compartir", "comparte", "responder", "responde", "comentar", "confirmar", "confirma", "transferir", "retirar", "subir", "aprobar", "desinstalar", "restablecer",
-    "apagar", "reiniciar"] },
+    "apagar", "reiniciar",
+    "fusionar", "desplegar", "revocar", "reembolsar", "desactivar", "cancelar pedido", "cancelar reserva", "anular", "cerrar sesión", "cerrar cuenta", "bloquear", "votar"] },
   fr: { words: ["envoyer", "renvoyer", "supprimer", "effacer", "retirer", "enlever", "rejeter", "vider la corbeille", "placer dans la corbeille",
     "mettre à la corbeille", "ne pas enregistrer", "acheter", "passer la commande", "passer commande", "commander", "payer", "réserver", "faire un don", "abonner",
     "désabonner", "publier", "poster", "partager", "répondre", "commenter", "soumettre", "valider", "confirmer", "transférer", "virement", "téléverser", "approuver",
-    "désinstaller", "réinitialiser", "éteindre", "redémarrer"] },
+    "désinstaller", "réinitialiser", "éteindre", "redémarrer",
+    "fusionner", "déployer", "révoquer", "rembourser", "désactiver", "annuler la commande", "se déconnecter", "déconnexion", "fermer le compte", "bloquer", "voter"] },
   it: { words: ["invia", "inviare", "elimina", "eliminare", "cancella", "cancellare", "rimuovi", "rimuovere", "scarta", "svuota il cestino", "svuota cestino",
     "sposta nel cestino", "non salvare", "acquista", "acquistare", "compra", "comprare", "effettua l'ordine", "effettua ordine", "ordina ora", "paga", "pagare",
     "prenota", "dona", "abbonati", "iscriviti", "annulla iscrizione", "disiscriviti", "pubblica", "pubblicare", "condividi", "rispondi", "commenta", "conferma",
-    "confermare", "trasferisci", "bonifico", "preleva", "carica", "approva", "disinstalla", "ripristina", "spegni", "riavvia"] },
+    "confermare", "trasferisci", "bonifico", "preleva", "carica", "approva", "disinstalla", "ripristina", "spegni", "riavvia",
+    "unisci", "revoca", "rimborsa", "disattiva", "annulla ordine", "disconnetti", "esci", "chiudi account", "blocca", "vota"] },
   "pt-br": { words: ["enviar", "envie", "reenviar", "excluir", "exclua", "apagar", "apague", "deletar", "remover", "descartar", "esvaziar lixo",
     "esvaziar a lixeira", "mover para o lixo", "mover para a lixeira", "não salvar", "comprar", "compre", "finalizar compra", "fazer pedido", "finalizar pedido",
     "pagar", "pague", "reservar", "doar", "assinar", "cancelar assinatura", "publicar", "publique", "postar", "compartilhar", "compartilhe", "responder", "comentar",
-    "confirmar", "confirme", "transferir", "sacar", "carregar", "fazer upload", "aprovar", "desinstalar", "redefinir", "desligar", "reiniciar"] },
+    "confirmar", "confirme", "transferir", "sacar", "carregar", "fazer upload", "aprovar", "desinstalar", "redefinir", "desligar", "reiniciar",
+    "mesclar", "implantar", "revogar", "reembolsar", "desativar", "cancelar pedido", "encerrar conta", "sair", "bloquear", "votar"] },
   pl: { words: ["wyślij", "wysłać", "usuń", "usunąć", "wymaż", "skasuj", "odrzuć", "opróżnij kosz", "przenieś do kosza", "nie zachowuj", "nie zapisuj", "kup",
     "kupić", "zamów", "zamówić", "złóż zamówienie", "zapłać", "zapłacić", "zarezerwuj", "przekaż darowiznę", "subskrybuj", "anuluj subskrypcję", "opublikuj",
     "opublikować", "publikuj", "udostępnij", "odpowiedz", "skomentuj", "komentuj", "prześlij", "przesłać", "zatwierdź", "potwierdź", "przelej", "przelew", "wypłać",
-    "odinstaluj", "resetuj", "zresetuj", "wyłącz", "uruchom ponownie"] },
+    "odinstaluj", "resetuj", "zresetuj", "wyłącz", "uruchom ponownie",
+    "scal", "wyloguj", "zablokuj", "dezaktywuj", "anuluj zamówienie", "zwróć pieniądze", "cofnij dostęp"] },
   ru: { words: ["отправить", "переотправить", "удалить", "стереть", "убрать", "очистить корзину", "переместить в корзину", "не сохранять", "купить",
     "оформить заказ", "заказать", "оплатить", "забронировать", "пожертвовать", "подписаться", "отписаться", "опубликовать", "поделиться", "ответить",
-    "комментировать", "прокомментировать", "подтвердить", "перевести", "вывести", "загрузить", "одобрить", "сбросить", "выключить", "перезагрузить"] },
+    "комментировать", "прокомментировать", "подтвердить", "перевести", "вывести", "загрузить", "одобрить", "сбросить", "выключить", "перезагрузить",
+    "объединить", "выйти", "заблокировать", "деактивировать", "отменить заказ", "вернуть деньги", "отозвать"] },
   uk: { words: ["надіслати", "відправити", "видалити", "стерти", "вилучити", "прибрати", "очистити кошик", "перемістити в кошик", "перенести в кошик",
     "не зберігати", "купити", "оформити замовлення", "замовити", "оплатити", "сплатити", "забронювати", "пожертвувати", "підписатися", "відписатися",
     "опублікувати", "поділитися", "відповісти", "коментувати", "прокоментувати", "подати", "підтвердити", "переказати", "переказ", "вивести", "завантажити",
-    "схвалити", "скинути", "вимкнути", "перезавантажити"] },
+    "схвалити", "скинути", "вимкнути", "перезавантажити",
+    "об'єднати", "вийти", "заблокувати", "деактивувати", "скасувати замовлення", "повернути кошти", "відкликати"] },
   tr: { words: ["gönder", "sil", "kaldır", "çöp sepetini boşalt", "çöp kutusunu boşalt", "çöp sepetine taşı", "çöp sepetine at", "kaydetme", "satın al",
     "sipariş ver", "siparişi tamamla", "öde", "ödeme yap", "rezervasyon yap", "bağış yap", "abone ol", "abonelikten çık", "yayınla", "paylaş", "yanıtla", "cevapla",
-    "yorum yap", "onayla", "aktar", "para çek", "yükle", "sıfırla", "yeniden başlat", "bilgisayarı kapat"] },
+    "yorum yap", "onayla", "aktar", "para çek", "yükle", "sıfırla", "yeniden başlat", "bilgisayarı kapat",
+    "birleştir", "çıkış yap", "oturumu kapat", "engelle", "devre dışı bırak", "siparişi iptal et", "iade et"] },
   vi: { words: ["gửi", "xóa", "xoá", "gỡ bỏ", "loại bỏ", "dọn sạch thùng rác", "làm rỗng thùng rác", "chuyển vào thùng rác", "đưa vào thùng rác", "không lưu",
     "mua", "đặt hàng", "thanh toán", "trả tiền", "đặt chỗ", "đặt phòng", "quyên góp", "đăng ký", "hủy đăng ký", "huỷ đăng ký", "=đăng", "đăng bài", "đăng tin",
     "xuất bản", "chia sẻ", "trả lời", "bình luận", "nộp", "xác nhận", "chuyển tiền", "chuyển khoản", "rút tiền", "tải lên", "phê duyệt", "gỡ cài đặt", "đặt lại",
-    "tắt máy", "khởi động lại"] },
+    "tắt máy", "khởi động lại",
+    "hợp nhất", "đăng xuất", "chặn", "vô hiệu hóa", "hủy đơn hàng", "huỷ đơn hàng", "hoàn tiền"] },
   hi: { words: ["भेज*", "हटा*", "मिटा*", "डिलीट*", "खरीद*", "भुगतान*", "प्रकाशित*", "सबमिट*", "पुष्टि*", "अपलोड*", "रीसेट*", "ऑर्डर*", "अनइंस्टॉल*", "ट्रांसफ़र*",
     "ट्रांसफर*", "स्थानांतरित*", "रीस्टार्ट*", "स्वीकृत*", "अनुमोदित*", "साझा करें", "शेयर करें", "जवाब दें", "उत्तर दें", "टिप्पणी करें", "जमा करें", "पोस्ट करें",
-    "सदस्यता लें", "सदस्यता रद्द", "निकालें", "शट डाउन", "पुनः आरंभ", "बुक करें", "दान करें", "सहेजें नहीं", "न सहेजें", "खाली करें"] },
+    "सदस्यता लें", "सदस्यता रद्द", "निकालें", "शट डाउन", "पुनः आरंभ", "बुक करें", "दान करें", "सहेजें नहीं", "न सहेजें", "खाली करें",
+    "लॉग आउट", "साइन आउट", "ब्लॉक*", "रिफंड*", "निष्क्रिय*"] },
   ko: { unspaced: true, words: ["보내기", "전송", "송신", "삭제", "제거", "지우기", "버리기", "폐기", "휴지통", "저장 안 함", "저장하지 않음", "구매", "구입", "결제",
     "지불", "주문", "구독", "예약", "기부", "후원", "게시", "등록", "올리기", "발행", "공개", "공유", "답장", "답글", "댓글", "제출", "확정", "송금", "이체", "출금",
-    "업로드", "승인", "재설정", "초기화", "시스템 종료", "다시 시작", "재시동", "탈퇴", "전달"] },
+    "업로드", "승인", "재설정", "초기화", "시스템 종료", "다시 시작", "재시동", "탈퇴", "전달",
+    "로그아웃", "차단", "환불", "비활성화", "주문 취소", "병합"] },
   ja: { unspaced: true, words: ["送信", "削除", "消去", "取り除", "除去", "破棄", "ゴミ箱を空", "ゴミ箱に入れる", "ゴミ箱へ移動", "保存しない", "購入", "買う", "注文", "支払",
     "決済", "予約", "寄付", "購読", "申し込", "申込", "投稿", "公開", "共有", "返信", "コメント", "提出", "確定", "確認", "振込", "振り込", "送金", "出金", "引き出",
-    "アップロード", "承認", "アンインストール", "リセット", "初期化", "シャットダウン", "再起動", "転送"] },
+    "アップロード", "承認", "アンインストール", "リセット", "初期化", "シャットダウン", "再起動", "転送",
+    "ログアウト", "ブロック", "返金", "無効化", "注文をキャンセル", "マージ"] },
   zh: { unspaced: true, words: ["发送", "删除", "抹掉", "移除", "清除", "丢弃", "放弃", "清倒废纸篓", "清空废纸篓", "清空回收站", "移到废纸篓", "不存储", "不保存", "购买",
     "结算", "结账", "下单", "支付", "付款", "预订", "预约", "捐款", "捐赠", "订阅", "退订", "发布", "发表", "分享", "共享", "回复", "评论", "提交", "确认", "转账",
-    "转帐", "汇款", "提现", "上传", "批准", "卸载", "重置", "关机", "重新启动", "重启", "转发"] },
+    "转帐", "汇款", "提现", "上传", "批准", "卸载", "重置", "关机", "重新启动", "重启", "转发",
+    "退出登录", "登出", "拉黑", "屏蔽", "退款", "停用", "取消订单", "合并"] },
   "zh-tw": { unspaced: true, words: ["傳送", "發送", "送出", "刪除", "清除", "移除", "丟棄", "放棄", "清空垃圾桶", "丟到垃圾桶", "移到垃圾桶", "不要儲存", "不儲存",
     "購買", "結帳", "下單", "付款", "支付", "預訂", "預約", "捐款", "捐贈", "訂閱", "發佈", "發布", "發表", "張貼", "分享", "共享", "回覆", "留言", "評論", "提交",
-    "確認", "轉帳", "匯款", "提款", "上傳", "核准", "批准", "解除安裝", "重置", "重設", "關機", "重新開機", "重新啟動", "轉寄"] },
+    "確認", "轉帳", "匯款", "提款", "上傳", "核准", "批准", "解除安裝", "重置", "重設", "關機", "重新開機", "重新啟動", "轉寄",
+    "登出", "封鎖", "退款", "停用", "取消訂單", "合併"] },
 };
 
 /** Security invariant: a field labelled with one of these holds a secret, and a step on it is never saved. */
@@ -85,6 +103,26 @@ export const SECRET_FIELDS: Readonly<Record<string, LanguageWords>> = {
   ja: { unspaced: true, words: ["パスワード", "パスコード", "暗証番号", "pinコード", "セキュリティコード", "認証コード", "確認コード", "カード番号", "クレジットカード"] },
   zh: { unspaced: true, words: ["密码", "口令", "安全码", "验证码", "卡号", "信用卡"] },
   "zh-tw": { unspaced: true, words: ["密碼", "安全碼", "驗證碼", "卡號", "信用卡"] },
+};
+
+/** A field the person searches with: pressing Return in one looks something up, it does not send or submit. */
+export const SEARCH_FIELDS: Readonly<Record<string, LanguageWords>> = {
+  en: { words: ["search*", "find", "filter", "look up"] },
+  de: { words: ["suche*", "such*", "finden"] },
+  es: { words: ["buscar", "busca", "búsqueda"] },
+  fr: { words: ["rechercher", "recherche", "chercher"] },
+  it: { words: ["cerca", "cercare", "ricerca"] },
+  "pt-br": { words: ["pesquisar", "pesquisa", "buscar", "busca"] },
+  pl: { words: ["szukaj", "wyszukaj"] },
+  ru: { words: ["поиск", "искать", "найти"] },
+  uk: { words: ["пошук", "шукати", "знайти"] },
+  tr: { words: ["ara", "arama"] },
+  vi: { words: ["tìm kiếm", "tìm"] },
+  hi: { words: ["खोज*"] },
+  ko: { unspaced: true, words: ["검색", "찾기"] },
+  ja: { unspaced: true, words: ["検索", "探す"] },
+  zh: { unspaced: true, words: ["搜索", "查找"] },
+  "zh-tw": { unspaced: true, words: ["搜尋", "查找"] },
 };
 
 const QUOTES = /[‘’ʼ`´]/g;
@@ -127,3 +165,22 @@ export const namesFinalAction = matcher(FINAL_ACTIONS);
 
 /** True when a field's label says it holds a password, PIN, code or card number in any language this app ships. */
 export const namesSecret = matcher(SECRET_FIELDS);
+
+/** True when a field's label says it is a search box in any language this app ships. */
+export const namesSearch = matcher(SEARCH_FIELDS);
+
+const KEY_SHAPES = [
+  /\bsk-[A-Za-z0-9_-]{16,}/u, /\b[spr]k_(?:live|test)_[A-Za-z0-9]{8,}/u, /\bgh[pousr]_[A-Za-z0-9]{20,}/u, /\bgithub_pat_[A-Za-z0-9_]{20,}/u,
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}/u, /\bAKIA[0-9A-Z]{16}\b/u, /\bAIza[0-9A-Za-z_-]{30,}/u, /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./u,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
+];
+
+/** True when typed text looks like a key or token: a known key shape, or one long unbroken run that mixes letters and
+ * digits the way no word, name, address or link does. Such text is never saved; it goes in as an input instead. */
+export function looksSecret(text: string): boolean {
+  if (KEY_SHAPES.some((shape) => shape.test(text))) return true;
+  const run = text.trim();
+  if (run.length < 24 || /\s/u.test(run) || /^https?:\/\//iu.test(run) || /^\{[\w-]+\}$/u.test(run)) return false;
+  if (/^[0-9a-f]{32,}$/iu.test(run)) return true;
+  return /^[A-Za-z0-9+/_=-]+$/u.test(run) && /[a-z]/u.test(run) && /[A-Z]/u.test(run) && /\d/u.test(run);
+}

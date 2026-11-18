@@ -31,6 +31,7 @@ const browser = (fail?: string): Caller => {
         const lines = ['- searchbox "Search" [ref=e' + snapshot + '0]', ...links.map((name, index) => `- link "${name}" [ref=e${snapshot}${index + 1}]`), "- text: Results for cats"];
         return { ok: true, structured: {}, text: lines.join("\n") };
       }
+      if (tool === "agent_browser_get_url") return { ok: true, structured: {}, text: "https://example.com/" };
       if (tool === fail) return { ok: false, error: "the page refused" };
       acted.push([tool, args]);
       return { ok: true, structured: {} };
@@ -56,11 +57,14 @@ beforeEach(() => {
   clock = 0;
 });
 
+/** Most of these recipes type words their name does not hold, which only the standard policy repeats. */
+const run = (saved: Recipe, options: Parameters<typeof replay>[1]) => replay(saved, { policy: "standard", ...options });
+
 describe("replay", () => {
   it("runs a recipe that crosses the desktop and the browser, with no model, finding each target afresh", async () => {
     const events: StepEvent[] = [];
     const steps: Step[] = [{ driver: "cua", tool: "click", args: {}, ...DOCUMENT }, searchFor("cats"), clickLink("Billing")];
-    const out = await replay(recipe(steps), { driver: [cuaDriver(desktop()), agentBrowserDriver(browser())], patience, onStep: (event) => events.push(event) });
+    const out = await run(recipe(steps), { driver: [cuaDriver(desktop()), agentBrowserDriver(browser())], patience, onStep: (event) => events.push(event) });
     expect(out).toMatchObject({ kind: "done", repaired: false, recipe: { revision: 1 } });
     expect(acted).toEqual([["click", { pid: 4242, window_id: 7, element_token: "s2-e2" }], ["agent_browser_fill", { text: "cats", selector: "@e10" }], ["agent_browser_click", { selector: "@e21" }]]);
     expect(events.map((event) => `${event.phase}:${event.tool}`)).toEqual([
@@ -69,24 +73,24 @@ describe("replay", () => {
 
   it("fills each {placeholder} from the inputs, and stops before acting when one is missing", async () => {
     const steps = [searchFor("{animal}")];
-    expect(await replay(recipe(steps, [], ["animal"]), { driver: agentBrowserDriver(browser()), inputs: { animal: "otters" }, patience })).toMatchObject({ kind: "done" });
+    expect(await run(recipe(steps, [], ["animal"]), { driver: agentBrowserDriver(browser()), inputs: { animal: "otters" }, patience })).toMatchObject({ kind: "done" });
     expect(acted).toEqual([["agent_browser_fill", { text: "otters", selector: "@e10" }]]);
-    expect(await replay(recipe(steps, [], ["animal"]), { driver: agentBrowserDriver(browser()), patience })).toMatchObject({ kind: "failed", index: 0, error: "no value for {animal}" });
+    expect(await run(recipe(steps, [], ["animal"]), { driver: agentBrowserDriver(browser()), patience })).toMatchObject({ kind: "failed", index: 0, error: "no value for {animal}" });
     expect(acted).toHaveLength(1);
   });
 
   it("verifies its checks at the end", async () => {
     const seen: Check = { kind: "text-visible", driver: "agent-browser", text: "Results for cats" };
-    expect(await replay(recipe([searchFor("cats")], [seen]), { driver: agentBrowserDriver(browser()), patience })).toMatchObject({ kind: "done" });
+    expect(await run(recipe([searchFor("cats")], [seen]), { driver: agentBrowserDriver(browser()), patience })).toMatchObject({ kind: "done" });
     const missing: Check = { ...seen, text: "Results for dogs" };
-    expect(await replay(recipe([searchFor("cats")], [missing]), { driver: agentBrowserDriver(browser()), patience }))
+    expect(await run(recipe([searchFor("cats")], [missing]), { driver: agentBrowserDriver(browser()), patience }))
       .toMatchObject({ kind: "failed", check: true, tool: "check", label: '"Results for dogs"', error: '"Results for dogs" is not visible' });
   });
 
   it("hands a step that cannot be found to repair, runs what it returns, and returns the recipe one revision on", async () => {
     links = ["Invoices", "Help"];
     const asked: Array<[Step, number, string]> = [];
-    const out = await replay(recipe([searchFor("cats"), clickLink("Billing")]), {
+    const out = await run(recipe([searchFor("cats"), clickLink("Billing")]), {
       driver: agentBrowserDriver(browser()), patience, now: () => 99,
       repair: async (step, context) => {
         asked.push([step, context.index, context.error]);
@@ -102,26 +106,60 @@ describe("replay", () => {
     links = [];
     let repairs = 0;
     const tryAgain = async () => { repairs++; return [clickLink("Elsewhere")]; };
-    expect(await replay(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience, repair: tryAgain })).toMatchObject({ kind: "failed", error: 'no "Elsewhere" (link) on the page' });
+    expect(await run(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience, repair: tryAgain })).toMatchObject({ kind: "failed", error: 'no "Elsewhere" (link) on the page' });
     expect(repairs).toBe(1);
     const unsafe = async () => [{ ...clickLink("Delete account") }];
-    expect(await replay(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience, repair: unsafe })).toMatchObject({ kind: "failed", error: 'no "Billing" (link) on the page' });
+    expect(await run(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience, repair: unsafe })).toMatchObject({ kind: "failed", error: 'no "Billing" (link) on the page' });
     const held: Caller = { call: async () => ({ ok: false, error: "A person is using this computer.", gate: true }) };
-    expect(await replay(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(held), patience, repair: tryAgain })).toMatchObject({ kind: "failed", gate: true });
+    expect(await run(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(held), patience, repair: tryAgain })).toMatchObject({ kind: "failed", gate: true });
     expect(repairs).toBe(1);
   });
 
   it("asks before each step and stops at a no, or when stopped", async () => {
-    expect(await replay(recipe([searchFor("cats"), clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience, approve: async (_step, index) => index === 0 }))
+    expect(await run(recipe([searchFor("cats"), clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience, approve: async (_step, index) => index === 0 }))
       .toEqual({ kind: "declined", index: 1, tool: "click", label: '"Billing" link' });
     const controller = new AbortController();
     controller.abort();
-    expect(await replay(recipe([searchFor("cats")]), { driver: agentBrowserDriver(browser()), signal: controller.signal })).toEqual({ kind: "stopped" });
+    expect(await run(recipe([searchFor("cats")]), { driver: agentBrowserDriver(browser()), signal: controller.signal })).toEqual({ kind: "stopped" });
   });
 
   it("refuses a step whose driver it was not given", async () => {
-    expect(await replay(recipe([{ driver: "cua", tool: "click", args: {}, ...DOCUMENT }]), { driver: agentBrowserDriver(browser()), patience }))
+    expect(await run(recipe([{ driver: "cua", tool: "click", args: {}, ...DOCUMENT }]), { driver: agentBrowserDriver(browser()), patience }))
       .toMatchObject({ kind: "failed", error: "no cua driver to run this step" });
+  });
+
+  it("runs nothing from a recipe that would not load, however it got here", async () => {
+    const unsafe = recipe([searchFor("cats"), { driver: "agent-browser", tool: "click", args: {}, target: { role: "button", name: "Delete account" } }]);
+    expect(await run(unsafe, { driver: agentBrowserDriver(browser()), patience })).toMatchObject({ kind: "failed", done: 0, error: "this recipe must not run (final-action)" });
+    expect(await run({ ...recipe([searchFor("cats")]), key: "something else" }, { driver: agentBrowserDriver(browser()), patience })).toMatchObject({ kind: "failed", error: "this recipe must not run (malformed)" });
+    // Strict is the default: typed words must come from the recipe's own request.
+    expect(await replay(recipe([searchFor("cats")]), { driver: agentBrowserDriver(browser()), patience })).toMatchObject({ kind: "failed", error: "this recipe must not run (typed-text-not-in-request)" });
+    expect(acted).toEqual([]);
+  });
+
+  it("checks a step again once its inputs are filled in", async () => {
+    const steps: Step[] = [
+      { driver: "agent-browser", tool: "open", args: { url: "https://example.com/{path}" } },
+      { driver: "agent-browser", tool: "select", args: { value: "{choice}" }, target: { role: "searchbox", name: "Search" } },
+    ];
+    const saved = recipe(steps, [], ["path", "choice"]);
+    expect(await run(saved, { driver: agentBrowserDriver(browser()), inputs: { path: "account", choice: "Weekly" }, patience })).toMatchObject({ kind: "done" });
+    acted = [];
+    expect(await run(saved, { driver: agentBrowserDriver(browser()), inputs: { path: "checkout/pay", choice: "Weekly" }, patience }))
+      .toMatchObject({ kind: "failed", index: 0, error: "with these inputs this step must not run (final-action)" });
+    expect(await run(saved, { driver: agentBrowserDriver(browser()), inputs: { path: "account", choice: "Delete everything" }, patience }))
+      .toMatchObject({ kind: "failed", index: 1, error: "with these inputs this step must not run (final-action)" });
+    expect(acted.map(([tool]) => tool)).toEqual(["agent_browser_open"]);
+  });
+
+  it("keeps looking for a missing target only as long as it is told to", async () => {
+    links = [];
+    await run(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience });
+    const usual = clock;
+    clock = 0;
+    await run(recipe([clickLink("Billing")]), { driver: agentBrowserDriver(browser()), patience, waitMs: 10_000 });
+    expect(usual).toBeLessThanOrEqual(3_000);
+    expect(clock).toBeGreaterThan(9_000);
   });
 });
 

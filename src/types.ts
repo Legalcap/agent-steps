@@ -39,7 +39,7 @@ export interface AppIdentity { bundleId?: string; name?: string }
 export interface ElementIdentity { role: string; label: string; path: string[] }
 
 /** A desktop step (Cua driver): the app by bundle id or name, the window by title, the element by accessibility role,
- * label and the path of its labelled ancestors. `hint` is a last-resort point a replay uses only when asked to. */
+ * label and the path of its labelled ancestors. Never a point on the screen. */
 export interface CuaStep {
   driver: "cua";
   tool: CuaTool;
@@ -47,7 +47,6 @@ export interface CuaStep {
   app?: AppIdentity;
   window?: { title: string };
   element?: ElementIdentity;
-  hint?: { x: number; y: number };
 }
 
 /** A web element as an accessibility snapshot names it. `near`: the closest heading or landmark above it, kept only
