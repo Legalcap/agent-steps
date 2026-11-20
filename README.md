@@ -2,16 +2,35 @@
 
 **Teach your agent a task once. Repeat it without the model.**
 
+[![CI](https://github.com/legalcap/agent-steps/actions/workflows/ci.yml/badge.svg)](https://github.com/legalcap/agent-steps/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/legalcap/agent-steps)](https://github.com/legalcap/agent-steps/releases)
+
+An open-source project by [Legalcap](https://www.legalcap.ai), where we build AI agents for legal operations.
+
 agent-steps watches an AI agent do a task in a browser ([agent-browser](https://github.com/vercel-labs/agent-browser))
 or on a desktop ([Cua](https://github.com/trycua/cua)'s computer driver), saves what it did as a small JSON recipe, and
 repeats it later with no model calls. Each step remembers *what* it touched (a button by its role and name, an app's
 control by its label), not *where* it was, so a repeat still works when the page or the window moves. When a step no
 longer matches, only that step goes back to your agent to fix, and the recipe comes back one revision on.
 
-> [!NOTE]
-> Version 0.1: the API and the recipe format can still change.
+**At a glance** (details and every caveat in [Benchmarks](#benchmarks)):
 
-## Why
+- A repeat costs **$0 and under a second**, against about 4¢ and 9 s for the AI doing the task again.
+- When the page changed, it **never did the wrong thing** on its own: it stops instead. With the AI taking over where
+  it stops, it finished **97%** of changed pages. Stagehand and Midscene, which guess with a model, did something the
+  task didn't ask for in 9 to 12 of 42 scenarios.
+- On **15 tasks from Stagehand's own eval suite**, it saved 13 recipes, and all 39 replays finished with no AI.
+- It **never saves** final actions (send, pay, delete, merge, sign out…), passwords or keys.
+
+> [!NOTE]
+> Version 0.2: the API and the recipe format can still change.
+
+## Why we built it
+
+Legal operations are full of tasks done the same way again and again in the same web apps and desktop programs, and
+in legal work a click on the wrong record is not acceptable. We wanted our agents to learn such a task once, repeat it
+as plain code, and stop and ask the moment anything looked different.
 
 AI agents are great at figuring out how to do something on a screen, and wasteful at doing the same thing again: every
 repeat costs tokens, takes longer and can go differently. Recorded macros are cheap but break as soon as a button moves,
@@ -586,6 +605,12 @@ npm test
 npm run build
 ```
 
+## Contributing
+
+Issues and pull requests are welcome. Run `npm test`, `npm run typecheck` and `npm run lint` before sending a change; anything that touches what may be saved or repeated needs a test that shows
+the unsafe case is refused.
+
 ## License
 
-MIT © Borja Soler. Born inside [Openpals](https://github.com/borjasolerme/Openpals).
+MIT © 2026 [Legalcap](https://www.legalcap.ai). Created by Borja Soler; born inside
+[Openpals](https://github.com/borjasolerme/Openpals).

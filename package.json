@@ -3,14 +3,14 @@
   "version": "0.2.0",
   "description": "Record what an AI agent does in a browser (agent-browser) or on a desktop (Cua) and repeat it without a model, finding each target again by what it is.",
   "license": "MIT",
-  "author": "Borja Soler",
+  "author": "Legalcap (https://www.legalcap.ai)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/borjasolerme/agent-steps.git"
+    "url": "git+https://github.com/legalcap/agent-steps.git"
   },
-  "homepage": "https://github.com/borjasolerme/agent-steps#readme",
+  "homepage": "https://github.com/legalcap/agent-steps#readme",
   "bugs": {
-    "url": "https://github.com/borjasolerme/agent-steps/issues"
+    "url": "https://github.com/legalcap/agent-steps/issues"
   },
   "keywords": [
     "ai-agents",
@@ -67,5 +67,8 @@
     "oxlint": "^1.94.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11"
-  }
+  },
+  "contributors": [
+    "Borja Soler"
+  ]
 }
