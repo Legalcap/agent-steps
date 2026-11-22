@@ -6,11 +6,11 @@
   "author": "Legalcap (https://www.legalcap.ai)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/legalcap/agent-steps.git"
+    "url": "git+https://github.com/Legalcap/agent-steps.git"
   },
-  "homepage": "https://github.com/legalcap/agent-steps#readme",
+  "homepage": "https://github.com/Legalcap/agent-steps#readme",
   "bugs": {
-    "url": "https://github.com/legalcap/agent-steps/issues"
+    "url": "https://github.com/Legalcap/agent-steps/issues"
   },
   "keywords": [
     "ai-agents",

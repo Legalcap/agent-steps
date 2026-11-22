@@ -2,9 +2,9 @@
 
 **Teach your agent a task once. Repeat it without the model.**
 
-[![CI](https://github.com/legalcap/agent-steps/actions/workflows/ci.yml/badge.svg)](https://github.com/legalcap/agent-steps/actions/workflows/ci.yml)
+[![CI](https://github.com/Legalcap/agent-steps/actions/workflows/ci.yml/badge.svg)](https://github.com/Legalcap/agent-steps/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/legalcap/agent-steps)](https://github.com/legalcap/agent-steps/releases)
+[![Release](https://img.shields.io/github/v/release/Legalcap/agent-steps)](https://github.com/Legalcap/agent-steps/releases)
 
 An open-source project by [Legalcap](https://www.legalcap.ai), where we build AI agents for legal operations.
 
